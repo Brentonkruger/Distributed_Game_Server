@@ -1,5 +1,11 @@
-from block import Block
-class gamestate:
+from enum import Enum
+
+class Block(Enum):
+    STABLE = 0
+    CRACKED = 1
+    HOLE = 2
+     
+class Gamestate:
     board = [[]]
     def __init__(self):
         #create board and 
@@ -9,9 +15,10 @@ class gamestate:
         return self.board[i][j]
     
     def change_block(self,i,j):
-        if self.board[i][j] is not Block.HOLE:
-            self.board[i][j] += 1
-            
+        if self.board[i][j] is Block.STABLE:
+            self.board[i][j] = Block.CRACKED
+        else:
+            self.board[i][j] = Block.HOLE
  
         
 
