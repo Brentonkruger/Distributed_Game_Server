@@ -1,4 +1,4 @@
-
+# This class is for a player instance on the server
 class Player:
     power = 0
     movement = []
@@ -8,3 +8,6 @@ class Player:
     
     def current_movement(self, movelist):
         self.movement = movelist
+
+    def intended_movement(self):
+        return self.movement
