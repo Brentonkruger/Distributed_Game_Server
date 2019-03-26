@@ -1,9 +1,14 @@
-# King_of_the_559
-This is a practice of creating a distributed system.
+# King of the 559
+The repository for our backend of a distributed system.
 
-This is a 2D game survival game, where players can compete over LAN to survive against the map and each other. 
+It holds the logic for a 2D game survival game, where players can compete over LAN to survive against the map and each other. 
 
 By using Viewstamped Replication, we can provide some amount of fault tolerance for each player (if the host disconnects) and provide a means to reconnect disconnected players.
+
+There are two main components of this repository:
+
+1. Routing Layer - Responsible for routing requests to the primary
+2. Server Layer - The code used to create and manage replicas for the viewstamped replication algorithm
 
 
 
@@ -53,3 +58,14 @@ flask run
 ```
 
 This should start the server at localhost:5000.
+
+
+# Server README
+
+## Testing
+```
+cd server
+python3 tests.py
+```
+
+This should return OK if all is well. 
