@@ -1,3 +1,5 @@
+#The logic for all gamestate code
+
 from enum import Enum
 
 class Block(Enum):
@@ -5,11 +7,11 @@ class Block(Enum):
     CRACKED = 1
     HOLE = 2
      
-class Gamestate:
+class Board:
     board = [[]]
-    def __init__(self):
-        #create board and 
-        self.board = [[Block.STABLE for i in range(10)]for j in range(10)]
+        #Create a stable board, with a specified size
+    def __init__(self, length, width):
+        self.board = [[Block.STABLE for i in range(length)]for j in range(width)]
     
     def check_block(self,i,j):
         return self.board[i][j]
@@ -19,8 +21,8 @@ class Gamestate:
             self.board[i][j] = Block.CRACKED
         else:
             self.board[i][j] = Block.HOLE
- 
-        
+
+
 
     
 
