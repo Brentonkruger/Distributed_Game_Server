@@ -11,4 +11,3 @@ class Player:
 
     def intended_movement(self):
         return self.movement
-        
