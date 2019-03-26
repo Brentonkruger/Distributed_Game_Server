@@ -6,10 +6,11 @@ class Block(Enum):
     STABLE = 0
     CRACKED = 1
     HOLE = 2
-    has_powerup = False
+    
+    def __init__(self):
+        self.has_powerup = False
      
 class Board:
-    board = [[]]
         #Create a stable board, with a specified size
     def __init__(self, length, width):
         self.board = [[Block.STABLE for i in range(width)]for j in range(length)]
