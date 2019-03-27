@@ -7,7 +7,7 @@ class Block(Enum):
     CRACKED = 1
     HOLE = 2
     
-    def __init__(self):
+    def __init__(self, *args):
         self.has_powerup = False
      
 class Board:
