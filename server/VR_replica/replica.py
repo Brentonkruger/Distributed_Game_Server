@@ -1,5 +1,7 @@
 from enum import Enum
 import ipaddress
+import asyncio
+import socket
 
 class Mode(Enum):
     BACKUP = 0
@@ -26,9 +28,20 @@ class replica:
         self.current_state = State.NORMAL
         self.connected_hosts = []
 
+        #get Ip of the local computer
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        #s.getsockname() has the local ip address at [0] and the local port at [1]
+        self.local_ip = s.getsockname()[0]
+        print("IP address: ", self.local_ip)
+        s.close()
+
+        #start the server
+        asyncio.run(self.read_network())
+
     def start_recovery(self):
         self.current_state = State.RECOVERING
-        #TODO: run the recovery protocol.
+        #TODO: run the recovery protocol
         self.current_state = State.NORMAL
 
     def start_view_change(self):
@@ -39,3 +52,17 @@ class replica:
     #add a new replica with the ip address in form "xxx.xxx.xxx.xxx"
     def add_new_replica(self, ip_addr):
         self.connected_hosts.append(Host(ip_addr))
+
+    async def parse_message(self, reader, writer):
+        msg = await reader.read()
+        #parse the message (json) and call the corresponding method to deal with it.
+        print(msg.decode())
+
+    async def read_network(self):
+
+        #open socket and wait for connection
+        a_server = await asyncio.start_server(self.parse_message, port=9999)
+
+        async with a_server:
+            await a_server.serve_forever()
+
