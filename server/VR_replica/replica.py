@@ -35,9 +35,14 @@ class replica:
         self.local_ip = s.getsockname()[0]
         print("IP address: ", self.local_ip)
         s.close()
+        self.loop = asyncio.new_event_loop()
+        
+        self.loop.create_task(self.read_network)
+        # self.loop.create_task()
+        self.loop.run_forever()
 
         #start the server
-        asyncio.run(self.read_network())
+        # asyncio.run(self.read_network())
 
     def start_recovery(self):
         self.current_state = State.RECOVERING
@@ -65,4 +70,6 @@ class replica:
 
         async with a_server:
             await a_server.serve_forever()
+
+        
 
