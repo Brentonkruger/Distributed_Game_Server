@@ -37,9 +37,12 @@ class replica:
         s.close()
         self.loop = asyncio.new_event_loop()
         
-        self.loop.create_task(self.read_network)
-        # self.loop.create_task()
-        self.loop.run_forever()
+        self.loop.create_task(self.read_network())
+        self.loop.create_task(self.send_message())
+        try:
+            self.loop.run_forever()
+        except:
+            self.loop.close()
 
         #start the server
         # asyncio.run(self.read_network())
@@ -57,6 +60,12 @@ class replica:
     #add a new replica with the ip address in form "xxx.xxx.xxx.xxx"
     def add_new_replica(self, ip_addr):
         self.connected_hosts.append(Host(ip_addr))
+
+    async def send_message(self):
+        reader, writer = await asyncio.open_connection('192.168.0.10', 9998)
+        # reader, writer = await asyncio.open_connection('192.168.1.89', 9999)
+        writer.write("Message from client".encode())
+        await writer.drain()
 
     async def parse_message(self, reader, writer):
         msg = await reader.read()
