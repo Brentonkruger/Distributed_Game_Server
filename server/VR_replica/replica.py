@@ -27,6 +27,7 @@ class replica:
         self.current_mode = Mode.BACKUP
         self.current_state = State.NORMAL
         self.connected_hosts = []
+        self.message_out_queue = asyncio.Queue()
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -35,7 +36,7 @@ class replica:
         self.local_ip = s.getsockname()[0]
         print("IP address: ", self.local_ip)
         s.close()
-        self.loop = asyncio.new_event_loop()
+        self.loop = asyncio.get_event_loop()
         
         self.loop.create_task(self.read_network())
         self.loop.create_task(self.send_message())
@@ -58,27 +59,34 @@ class replica:
         self.current_state = State.NORMAL
     
     #add a new replica with the ip address in form "xxx.xxx.xxx.xxx"
-    def add_new_replica(self, ip_addr):
+    async def add_new_replica(self, ip_addr):
         self.connected_hosts.append(Host(ip_addr))
 
+    async def add_send_message(self, ipaddr, msg):
+        await self.message_out_queue.put((ipaddr, msg))
+        await asyncio.sleep(0)
+        
+
     async def send_message(self):
-        reader, writer = await asyncio.open_connection('192.168.0.10', 9998)
-        # reader, writer = await asyncio.open_connection('192.168.1.89', 9999)
-        writer.write("Message from client".encode())
-        await writer.drain()
+        while True:
+            ipaddr, msg = await self.message_out_queue.get()
+            reader, writer = await asyncio.open_connection(ipaddr, 9998)
+            print(ipaddr)
+            # print(msg)
+            writer.write(msg.encode())
+            writer.write_eof()
+            await writer.drain()
 
     async def parse_message(self, reader, writer):
         msg = await reader.read()
         #parse the message (json) and call the corresponding method to deal with it.
         print(msg.decode())
+        await self.message_out_queue.put(("192.168.0.10", msg.decode()))
 
     async def read_network(self):
 
         #open socket and wait for connection
-        a_server = await asyncio.start_server(self.parse_message, port=9999)
-
-        async with a_server:
-            await a_server.serve_forever()
+        a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
 
         
 
