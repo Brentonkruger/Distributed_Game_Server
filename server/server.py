@@ -8,7 +8,7 @@ import asyncio
 
 def main():
     rep = replica.replica()
-    rep.add_send_message("192.168.0.10", "TESTING MESSAGE")
+    
 
 
 if __name__ == '__main__':
