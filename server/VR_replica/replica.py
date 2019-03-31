@@ -2,6 +2,8 @@ from enum import Enum
 import ipaddress
 import asyncio
 import socket
+import secrets
+import json
 
 class Mode(Enum):
     BACKUP = 0
@@ -16,6 +18,9 @@ class Host():
 
     def __init__(self, ip_addr):
         self.address = ipaddress.ip_address(ip_addr) 
+    
+    def get_address(self):
+        return self.address
 
     def __lt__(self, other):
         return self.address < other.address
@@ -23,11 +28,12 @@ class Host():
 
 class replica:
     
-    def __init__(self):
+    def __init__(self, routing_ip):
         self.current_mode = Mode.BACKUP
         self.current_state = State.NORMAL
         self.connected_hosts = []
         self.message_out_queue = asyncio.Queue()
+        self.routing_layer = routing_ip
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -48,9 +54,19 @@ class replica:
         #start the server
         # asyncio.run(self.read_network())
 
+    def find_replicas(self):
+        #TODO: 1. Send broadcast to network
+        #
+        pass
+
     def start_recovery(self):
         self.current_state = State.RECOVERING
         #TODO: run the recovery protocol
+        #Send broadcast to all replicas with random nonce 
+        nonce = secrets.randbits(32)
+        # self.replica_broadcast()
+
+        #Update state from responses until majority is recieved
         self.current_state = State.NORMAL
 
     def start_view_change(self):
@@ -60,11 +76,16 @@ class replica:
     
     #add a new replica with the ip address in form "xxx.xxx.xxx.xxx"
     async def add_new_replica(self, ip_addr):
-        self.connected_hosts.append(Host(ip_addr))
+        if Host(ip_addr) not in self.connected_hosts:
+            self.connected_hosts.append(Host(ip_addr))
 
     async def add_send_message(self, ipaddr, msg):
         await self.message_out_queue.put((ipaddr, msg))
         await asyncio.sleep(0)
+
+    async def replica_broadcast(self, msg):
+        for rep in self.connected_hosts:
+            self.message_out_queue.put((rep.get_address(), msg))
         
 
     async def send_message(self):
@@ -89,4 +110,6 @@ class replica:
         a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
 
         
+
+
 

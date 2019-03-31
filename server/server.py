@@ -7,7 +7,7 @@ import asyncio
 
 
 def main():
-    rep = replica.replica()
+    rep = replica.replica(None)
     
 
 
