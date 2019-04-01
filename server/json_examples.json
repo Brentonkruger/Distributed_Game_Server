@@ -58,8 +58,15 @@
             "Type": "JoinOK",
             "Primary_IP": "192.0.2.0"
         },
+        
         {
-            "Type": "Replica_List"
+            "Type": "Replica_List",
+            "Replica_List": [
+                "192.0.2.0",
+                "192.0.2.0",
+                "192.0.2.0",
+                "192.0.2.0"
+            ]
         }
             
         
