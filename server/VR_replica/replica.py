@@ -42,17 +42,18 @@ class replica:
         self.local_ip = s.getsockname()[0]
         print("IP address: ", self.local_ip)
         s.close()
-        self.loop = asyncio.get_event_loop()
-        
+
+        #start the local loop to allow for asyncio (starts the server)
+        self.loop = asyncio.get_event_loop()        
         self.loop.create_task(self.read_network())
         self.loop.create_task(self.send_message())
         try:
             self.loop.run_forever()
         except:
             self.loop.close()
+        
 
-        #start the server
-        # asyncio.run(self.read_network())
+        
 
     def find_replicas(self):
         #TODO: 1. Send broadcast to network
@@ -79,15 +80,15 @@ class replica:
         if Host(ip_addr) not in self.connected_hosts:
             self.connected_hosts.append(Host(ip_addr))
 
-    async def add_send_message(self, ipaddr, msg):
-        await self.message_out_queue.put((ipaddr, msg))
+    #sending message section
+    async def add_to_send_queue(self, ipaddr, msg):
+        await self.message_out_queue.put((str(ipaddr), msg))
         await asyncio.sleep(0)
 
     async def replica_broadcast(self, msg):
         for rep in self.connected_hosts:
             self.message_out_queue.put((rep.get_address(), msg))
         
-
     async def send_message(self):
         while True:
             ipaddr, msg = await self.message_out_queue.get()
@@ -98,6 +99,7 @@ class replica:
             writer.write_eof()
             await writer.drain()
 
+    #reading message section
     async def parse_message(self, reader, writer):
         msg = await reader.read()
         #parse the message (json) and call the corresponding method to deal with it.
@@ -108,6 +110,7 @@ class replica:
 
         #open socket and wait for connection
         a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
+        
 
         
 

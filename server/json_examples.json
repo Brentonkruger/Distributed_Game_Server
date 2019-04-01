@@ -1,0 +1,70 @@
+
+{
+    "Message_Types": [
+        {
+            "Type": "Request",
+            "Operation": [
+                "Up",
+                "Down",
+                "Left",
+                "Right"        
+            ],
+            "Client_ID": 2,
+            "N_Request": 5 
+        },
+
+        {
+            "Type": "Prepare",
+            "N_View": 0,
+            "Message":  {
+                "Operation": [
+                    "Up",
+                    "Down",
+                    "Left",
+                    "Right"        
+                ],
+                "Client_ID": 2,
+                "N_Request": 5 
+            },
+            "N_Operation": 16,
+            "N_Commit": 15
+
+        },
+
+        {
+            "Type": "PrepareOK",
+            "N_View": 0,
+            "N_Operation": 16,
+            "N_Backup": 1
+        },
+
+        {
+            "Type": "Reply",
+            "N_View": 0,
+            "N_Request": 5,
+            "Result": [
+                "Up",
+                "Down",
+                "Left",
+                "Right"        
+            ]
+        },
+
+        {
+            "Type": "Join"
+        },
+
+        {
+            "Type": "JoinOK",
+            "Primary_IP": "192.0.2.0"
+        },
+        {
+            "Type": "Replica_List"
+        }
+            
+        
+    ]
+
+}
+
+
