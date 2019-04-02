@@ -80,3 +80,52 @@
 }
 
 
+
+
+///////////////////////////////////////////
+// ROUTING LAYER JSON INFORMATION:
+///////////////////////////////////////////
+
+/////// CLIENT FUNCTIONS //////////////////
+
+// 1) route: "/connectPlayer"
+    // connects clients to the game
+    // no json message needed
+
+// 2) route: "/forwardToMainServer"
+    // forwards any json message from client to the main server
+
+
+////// SERVER FUNCTIONS //////////////////
+
+// 1) route: "/updateMainServer"
+    // server tells routing layer who the new main server is after an election
+    // json request: 
+        {
+            "ip": "192.0.2.0"
+        }
+
+// 2) route: "/updatePlayersGameState"
+    // server sends routing layer a single json message with new game state. Routing layer then forwards this message to all players
+
+// 3) route: "/join"
+    //  Server requests routing layaer to join network. Routing layer replies with the IP of the main server
+    //  note: first server to /join is assigned to be the main server in the routing layer
+    // json request: 
+        {
+            "ip": "192.0.2.0"
+        }
+    // json response:
+        {
+            "Type": "JoinOK",
+            "Primary_IP": "192.0.2.1"
+        }
+        
+
+
+    
+    
+    
+     
+    
+
