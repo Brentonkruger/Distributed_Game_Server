@@ -4,6 +4,7 @@ import asyncio
 import socket
 import secrets
 import json
+import requests
 
 class Mode(Enum):
     BACKUP = 0
@@ -103,19 +104,30 @@ class replica:
     #reading message section
     async def parse_message(self, reader, writer):
         msg = await reader.read()
-        #parse the message (json) and call the corresponding method to deal with it.
-        print(msg.decode())
-        await self.message_out_queue.put(("192.168.0.10", msg.decode()))
+        text = msg.decode()
+        if "HTTP" in text:
+            message_type = text.split()[1].strip('/').split('.')[0]
+            print(message_type)
+            r = requests.post("http://192.168.0.10:9998", json.dumps('{"Type": "Request","Operation": ["Up","Down","Left","Right"],"Client_ID": 2,"N_Request": 5}'))
+            print(r.status_code)
+
+            
+
+        # await self.message_out_queue.put(("192.168.0.10", msg.decode()))
 
     async def read_network(self):
 
         #open socket and wait for connection
         a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
         
-    def createJson(self, type):
+    def createJson(self, type_message):
         #Create a dictionary of the things you want in the json object, then encode.
         # json_dict = {type:}
         pass
+
+    def create_message(self, type_message, ip_addr, port):
+        a_string = "HEAD /" + str(type_message) + " HTTP/1.1\nHost: " + ip_addr + ":" + str(port) + "\nAccept-Encoding: identity\nContent-Length: 0"
+        return a_string
 
         
 
