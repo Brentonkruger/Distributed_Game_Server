@@ -26,6 +26,7 @@ class Host():
         return self.address < other.address
 
 
+
 class replica:
     
     def __init__(self, routing_ip):
@@ -111,6 +112,10 @@ class replica:
         #open socket and wait for connection
         a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
         
+    def createJson(self, type):
+        #Create a dictionary of the things you want in the json object, then encode.
+        # json_dict = {type:}
+        pass
 
         
 
