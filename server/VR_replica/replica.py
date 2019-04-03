@@ -60,15 +60,36 @@ class replica:
         #
         pass
 
-    def start_recovery(self):
+		# WORKING HERE
+    def start_recovery(self)
         self.current_state = State.RECOVERING
-        #TODO: run the recovery protocol
-        #Send broadcast to all replicas with random nonce 
+		
+        #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-        # self.replica_broadcast()
-
-        #Update state from responses until majority is recieved
+		message = {
+			"Type": "Recovery_Message",
+			"N_Replica": self.address,
+			"Nonce": nonce
+		}
+		
+		# Convert message to JSON
+		jsonToSend = json.dumps(message)
+		
+        self.replica_broadcast(jsonToSend)
+		
+		# Waiting until enough responses received
+		i = 0
+		#while i < (len(connected_hosts) / 2) + 1
+			#TODO receive responses
+			
+			# Increment counter by 1 each time a replica responds
+			
+		#TODO update gamestate of replica
+		
+        #Update state from responses once majority is received
         self.current_state = State.NORMAL
+		
+		# WORKING ON ABOVE
 
     def start_view_change(self):
         self.current_state = State.VIEW_CHANGE
