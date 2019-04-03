@@ -2,13 +2,16 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 import ipaddress
+import requests
 from http import client as httpclient
+import json
 
 
 
 def client():
+    # r = requests.post('http://192.168.0.10:9999/resource', json = json.dumps('{"Type": "Request","Operation": ["Up","Down","Left","Right"],"Client_ID": 2,"N_Request": 5}'))
     a_client = httpclient.HTTPConnection('192.168.0.10', 9999)
-    a_client.request("POST", "/index.html")
+    a_client.request("POST", "/gamestate", body = json.dumps('{"Type": "Request","Operation": ["U","D","L","R","N"],"Client_ID": 2,"N_Request": 5}'))
     # data = a_client.getresponse()
 
 #     reader, writer = await asyncio.open_connection(str(ipaddress.ip_address('192.168.0.10')), 9999)

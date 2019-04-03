@@ -103,13 +103,21 @@ class replica:
 
     #reading message section
     async def parse_message(self, reader, writer):
-        msg = await reader.read()
-        text = msg.decode()
+        text = ""
+        msg = await reader.readline()
+        while(msg != b''):
+            print(msg)
+            text += msg.decode()
+            msg = await reader.readline()
+        
         if "HTTP" in text:
-            message_type = text.split()[1].strip('/').split('.')[0]
+            lines = text.split('\n')
+            message_type = lines[0].split(' ')[1].strip('/').split('.')[0]
+            # writer.write(b'HTTP/1.1 200 OK')
+            # writer.write_eof()
             print(message_type)
-            r = requests.post("http://192.168.0.10:9998", json.dumps('{"Type": "Request","Operation": ["Up","Down","Left","Right"],"Client_ID": 2,"N_Request": 5}'))
-            print(r.status_code)
+            r = requests.get("http://192.168.0.10:9998/players")
+            
 
             
 
