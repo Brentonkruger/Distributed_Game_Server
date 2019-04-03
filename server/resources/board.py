@@ -11,6 +11,7 @@ class Block(Enum):
         self.has_powerup = False
      
 class Board:
+    cracked_locations = {}
         #Create a stable board, with a specified size
     def __init__(self, length, width):
         self.board = [[Block.STABLE for i in range(width)]for j in range(length)]

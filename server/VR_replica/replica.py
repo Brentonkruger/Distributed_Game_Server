@@ -104,12 +104,16 @@ class replica:
     #reading message section
     async def parse_message(self, reader, writer):
         text = ""
-        msg = await reader.readline()
-        while(msg != b''):
-            print(msg)
-            text += msg.decode()
-            msg = await reader.readline()
+        msg = await reader.read()
+        text = msg.decode()
+        print(text)
+        # msg = await reader.readline()
+        # while(msg != b''):
+        #     print(msg)
+        #     text += msg.decode()
+        #     msg = await reader.readline()
         
+        #from the routing layer
         if "HTTP" in text:
             lines = text.split('\n')
             message_type = lines[0].split(' ')[1].strip('/').split('.')[0]
@@ -117,7 +121,11 @@ class replica:
             # writer.write_eof()
             print(message_type)
             r = requests.get("http://192.168.0.10:9998/players")
-            
+        
+        #from other servers
+        #decode json
+
+
 
             
 

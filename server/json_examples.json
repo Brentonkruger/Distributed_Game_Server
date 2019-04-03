@@ -3,12 +3,7 @@
     "Message_Types": [
         {
             "Type": "Request",
-            "Operation": [
-                "Up",
-                "Down",
-                "Left",
-                "Right"        
-            ],
+            "Operation": "U",
             "Client_ID": 2,
             "N_Request": 5 
         },
@@ -17,14 +12,7 @@
             "Type": "Prepare",
             "N_View": 0,
             "Message":  {
-                "Operation": [
-                    "Up",
-                    "Down",
-                    "Left",
-                    "Right"        
-                ],
-                "Client_ID": 2,
-                "N_Request": 5 
+                "Operation": ["U","D","L","R"]
             },
             "N_Operation": 16,
             "N_Commit": 15
@@ -41,13 +29,7 @@
         {
             "Type": "Reply",
             "N_View": 0,
-            "N_Request": 5,
-            "Result": [
-                "Up",
-                "Down",
-                "Left",
-                "Right"        
-            ]
+            "Result": ["U","D","L","R"]
         },
 
         {
@@ -74,7 +56,6 @@
             "IP": "192.0.2.0"
         }
             
-        
     ]
 
 }
