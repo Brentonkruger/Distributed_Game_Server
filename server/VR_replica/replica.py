@@ -66,14 +66,14 @@ class replica:
 		
         #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-		message = {
-			"Type": "Recovery_Message",
-			"N_Replica": self.address,
-			"Nonce": nonce
-		}
-		
-		# Convert message to JSON
-		jsonToSend = json.dumps(message)
+	message = {
+		"Type": "Recovery_Message",
+		"N_Replica": self.address,
+		"Nonce": nonce
+	}
+	
+	# Convert message to JSON
+	jsonToSend = json.dumps(message)
 		
         self.replica_broadcast(jsonToSend)
 		
