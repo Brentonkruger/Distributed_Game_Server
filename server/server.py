@@ -7,7 +7,7 @@ import asyncio
 
 
 def main():
-    rep = replica.replica(None)
+    rep = replica.replica("192.168.0.10")
     
 
 
