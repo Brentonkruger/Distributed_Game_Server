@@ -79,6 +79,10 @@ class replica:
 
     #sending message section
 
+    async def send_replica_list(self, request):
+        print(request)
+        pass
+
     async def replica_broadcast(self, req_type, req_location, msg):
         for rep in self.connected_hosts:
             await self.send_message(str(rep),req_type, req_location, msg)
@@ -108,7 +112,12 @@ class replica:
         self.session = aiohttp.ClientSession()
         self.app = web.Application()
         self.app.add_routes([web.get('/JoinOK', self.add_new_replica),
-                            web.post('/Request', self.process_request)])
+                            web.post('/Request', self.process_request),
+                            web.post('/ViewChange', self.start_view_change),
+                            web.post('/Ready', self.readied_up),
+                            web.post('/Recover', self.start_recovery),
+                            web.post('/Commit', self.apply_commit),
+                            web.post('/UpdateReplicaList', self.send_replica_list)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.local_ip, 9999)
