@@ -137,12 +137,23 @@ class TestingBoard(unittest.TestCase):
         self.brd.randomly_generate_powerups(3)
         self.assertEqual(len(self.brd.powerup_locations), 0)
         
-    def test_gamestate_generate_player_position(self):
+    def test_gamestate_generate_player_positions(self):
+        self.brd = board.Board(10)
+        self.brd.assign_players(5)
+        self.assertEqual(len(self.brd.get_player_locations()), 5)
+
+    def test_gamestate_generate_powerups_with_many_players(self):
+        self.brd = board.Board(2)
+        self.brd.assign_players(3)
+        # Try to gen more powerups then there is space.
+        self.brd.randomly_generate_powerups(3)
+        self.assertEqual(len(self.brd.powerup_locations), 1)
+    
+    def test_gamestate_move_players(self):
         return False
 
-    def test_gamestate_generate_multiple_player_positions(self):
+    def test_gamestate_complete_turn(self):
         return False
-   
 
 if __name__ == '__main__':
     unittest.main()

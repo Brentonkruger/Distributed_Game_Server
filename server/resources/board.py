@@ -2,6 +2,8 @@
 
 from enum import Enum
 import random
+from . import player
+
 
 class BlockState(Enum):
     STABLE = 0
@@ -21,16 +23,15 @@ class Block():
         if self.block_state == BlockState.HOLE:
             return "[H]"
 
-     
-class Board:
-    
+
+class Board:    
     #Create a blank board, with a specified size (the width and height of the square board)
     def __init__(self, size):
         self.stable_locations = set()
         self.cracked_locations = set()
         self.hole_locations = set()
-        self.player_locations = set()
         self.powerup_locations = set()
+        self.player_list = []
         for i in range(size):
             for j in range(size):
                 self.stable_locations.add((i,j))
@@ -87,17 +88,28 @@ class Board:
         if quantity > len(self.stable_locations):
             quantity = len(self.stable_locations)
         if quantity > 0:
-            for powerup in range(quantity):  
-                chosen_tile = (random.sample(self.stable_locations, 1))
-                self.add_powerup(chosen_tile[0][0], chosen_tile[0][1])
+            for powerup in range(quantity): 
+                avalible_locations = self.stable_locations.difference(self.powerup_locations)
+                avalible_locations = avalible_locations.difference(self.get_player_locations())
+                if len(avalible_locations) > 0:
+                    chosen_tile = (random.sample(avalible_locations, 1))
+                    self.add_powerup(chosen_tile[0][0], chosen_tile[0][1])
             
-        
+    def assign_players(self, number_of_players):
+        for value in range(number_of_players):
+            self.assign_player(value)
 
-    def assign_players(self, number_of_players, board):
-        return False
+    # Assigns a player to a location that is on stable ground with no other players
+    def assign_player(self, player_id):
+        chosen_tile = (random.sample(self.stable_locations.difference(self.get_player_locations()), 1))
+        newPlayer = player.Player(player_id)
+        newPlayer.current_location = (chosen_tile[0][0], chosen_tile[0][1])
+        self.player_list.append(newPlayer)
 
-        
-
-    
+    def get_player_locations(self):
+        player_locations = []
+        for player in self.player_list:
+            player_locations.append(player.current_location)
+        return player_locations
 
 
