@@ -19,20 +19,19 @@ class Block(Enum):
             return "[H]"
      
 class Board:
-
-    stable_locations = set()
-    cracked_locations = set()
-    hole_locations = set()
-    player_locations = set()
-    powerup_locations = set()
-
+    
     #Create a blank board, with a specified size (the width and height of the square board)
     def __init__(self, size):
+        self.stable_locations = set()
+        self.cracked_locations = set()
+        self.hole_locations = set()
+        self.player_locations = set()
+        self.powerup_locations = set()
         for i in range(size):
             for j in range(size):
                 self.stable_locations.add((i,j))
-                
         self.board = [[Block.STABLE]*size]*size
+        
 
     def print_board(self):
         string = ""
@@ -63,8 +62,16 @@ class Board:
             self.board[x][y].has_powerup = True
             return True
 
-    def assign_players(number_of_players, board):
-        return false
+    def transition_blocks(self):
+        copy_of_cracked_locations = self.cracked_locations.copy()
+        for tup in copy_of_cracked_locations:
+            self.change_block(tup[0],tup[1])
+
+    def randomly_generate_powerups(self, quantity):
+        return False
+
+    def assign_players(self, number_of_players, board):
+        return False
 
         
 
