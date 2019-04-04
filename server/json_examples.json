@@ -1,13 +1,14 @@
 
 {
     "Message_Types": [
+        // send to GET /Request
         {
             "Type": "Request",
             "Operation": "U",
             "Client_ID": 2,
             "N_Request": 5 
         },
-
+        // send to GET /Prepare
         {
             "Type": "Prepare",
             "N_View": 0,
@@ -18,29 +19,29 @@
             "N_Commit": 15
 
         },
-
+        // sent in response to POST /Prepare
         {
             "Type": "PrepareOK",
             "N_View": 0,
             "N_Operation": 16,
             "N_Backup": 1
         },
-
+        //sent in response to POST /Request
         {
             "Type": "Reply",
             "N_View": 0,
             "Result": ["U","D","L","R"]
         },
-
+        // sent to GET /Join
         {
             "Type": "Join"
         },
-
+        //sent in response to /Join
         {
             "Type": "JoinOK",
             "Primary_IP": "192.0.2.0"
         },
-
+        // sent to POST /UpdateReplicaList
         {
             "Type": "Replica_List",
             "Replica_List": [
