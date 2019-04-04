@@ -1,16 +1,17 @@
 
 {
     "Message_Types": [
-        // send to GET /Request
+        // send to GET /PlayerMovement
         {
-            "Type": "Request",
+            "Type": "PlayerMovement",
             "Operation": "U",
             "Client_ID": 2,
             "N_Request": 5 
         },
-        // send to GET /Prepare
+        // send to GET /ComputeGameState
+        // replies with gamestate
         {
-            "Type": "Prepare",
+            "Type": "GameState",
             "N_View": 0,
             "Message":  {
                 "Operation": ["U","D","L","R"]
