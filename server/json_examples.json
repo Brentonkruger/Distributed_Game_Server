@@ -55,8 +55,25 @@
         {
             "Type": "New_Primary",
             "IP": "192.0.2.0"
+        },
+        
+        // sent to POST /RecoveryMessage
+        {
+            "Type": "Recovery_Message",
+            "N_Replica": "192.0.2.0",
+            "Nonce": nonce
+        },
+        
+        // sent in response to /RecoveryMessage
+        {
+            "Type": "Recovery_Response",
+            "N_View": 0,
+            "Crashed_Replica": "192.0.2.0",
+            "Log": log,
+            "N_Operation": 15,
+            "N_Commit": 16,
+            "N_Replica": "192.0.2.0"
         }
-            
     ]
 
 }
