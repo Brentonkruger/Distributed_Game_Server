@@ -107,7 +107,7 @@ class replica:
 
     async def request_primary_ip(self):
         #add local ip
-        self.add_new_replica(self.local_ip)
+        await self.add_new_replica(self.local_ip)
         #request primary ip
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
