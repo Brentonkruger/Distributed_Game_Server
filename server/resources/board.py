@@ -1,6 +1,7 @@
 #The logic for all gamestate code
 
 from enum import Enum
+import random
 
 class BlockState(Enum):
     STABLE = 0
@@ -66,9 +67,12 @@ class Board:
             return False
         else:
             self.board[x][y].has_powerup = True
+            self.powerup_locations.add((x,y))
             return True
 
     def remove_powerup(self, x, y):
+        if (x,y) in self.powerup_locations:
+            self.powerup_locations.remove((x,y))
         self.board[x][y].has_powerup = False
 
     def transition_blocks(self):
@@ -77,8 +81,17 @@ class Board:
             self.change_block(tup[0],tup[1])
             self.remove_powerup(tup[0],tup[1])
 
+    # Given some amount of powerups we want to generate, generate them on stable locations.
     def randomly_generate_powerups(self, quantity):
-        return False
+        # We cannot generate more powerups than there are stable locations
+        if quantity > len(self.stable_locations):
+            quantity = len(self.stable_locations)
+        if quantity > 0:
+            for powerup in range(quantity):  
+                chosen_tile = (random.sample(self.stable_locations, 1))
+                self.add_powerup(chosen_tile[0][0], chosen_tile[0][1])
+            
+        
 
     def assign_players(self, number_of_players, board):
         return False

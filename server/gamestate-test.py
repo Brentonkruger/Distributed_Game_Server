@@ -113,10 +113,29 @@ class TestingBoard(unittest.TestCase):
         self.assertFalse(self.brd.check_block(1,1).has_powerup)
 
     def test_gamestate_generate_powerup(self):
-        return False
+        # Initialize game size
+        self.brd = board.Board(10)
+        self.brd.randomly_generate_powerups(1)
+        self.assertEqual(len(self.brd.powerup_locations), 1)
 
     def test_gamestate_generate_3_powerups(self):
-        return False
+        # Initialize game size
+        self.brd = board.Board(10)
+        self.brd.randomly_generate_powerups(3)
+        self.assertEqual(len(self.brd.powerup_locations), 3)
+
+    def test_gamestate_generate_powerup_with_less_stable(self):
+        # Initialize game size
+        self.brd = board.Board(1)
+        self.brd.randomly_generate_powerups(3)
+        self.assertEqual(len(self.brd.powerup_locations), 1)
+
+    def test_gamestate_generate_powerup_with_no_stable(self):
+        # Initialize game size
+        self.brd = board.Board(1)
+        self.brd.change_block(0,0)
+        self.brd.randomly_generate_powerups(3)
+        self.assertEqual(len(self.brd.powerup_locations), 0)
         
     def test_gamestate_generate_player_position(self):
         return False
