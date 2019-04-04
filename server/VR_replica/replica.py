@@ -54,16 +54,16 @@ class replica:
 		
         #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-	message = {
-		"Type": "Recovery_Message",
-		"N_Replica": self.address,
-		"Nonce": nonce
-	}
+	    message = {
+		    "Type": "Recovery_Message",
+		    "N_Replica": self.local_ip,
+		    "Nonce": nonce
+	    }
 	
-	# Convert message to JSON
-	jsonToSend = json.dumps(message)
+	    # Convert message to JSON
+	    jsonToSend = json.dumps(message)
 		
-        self.replica_broadcast(jsonToSend)
+        self.replica_broadcast("post", self.local_ip, jsonToSend)
 		
 		# Waiting until enough responses received
 		i = 0
@@ -77,6 +77,24 @@ class replica:
         #Update state from responses once majority is received
         self.current_state = State.NORMAL
 		
+    def recovery_response(self)
+        #TODO get recovery message
+        
+        # Get reply
+
+        reply = {
+		    "Type": "Recovery_Response",
+		    "N_View": /* View Number */,
+		    "Crashed_Replica": /* IP of crashed replica */
+		    "Log": log,
+		    "N_Operation": /* Operation number */,
+		    "N_Commit": /* Commit number */,
+		    "N_Replica": self.local_ip
+	    }
+
+        # Change below
+        self.send_message("post", self.local_ip, reply)
+
 		# WORKING ON ABOVE
 
     def start_view_change(self):
