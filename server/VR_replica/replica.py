@@ -49,48 +49,49 @@ class replica:
 
 
 		# WORKING HERE
-    def start_recovery(self)
+    def start_recovery(self):
         self.current_state = State.RECOVERING
 		
         #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-	    message = {
-		    "Type": "Recovery_Message",
-		    "N_Replica": self.local_ip,
-		    "Nonce": nonce
+        message = {
+            "Type": "Recovery_Message",
+            "N_Replica": self.local_ip,
+            "Nonce": nonce
 	    }
-	
+
 	    # Convert message to JSON
-	    jsonToSend = json.dumps(message)
+        jsonToSend = json.dumps(message)
 		
-        self.replica_broadcast("post", self.local_ip, jsonToSend)
+        self.replica_broadcast("post", self.local_ip, message)
 		
 		# Waiting until enough responses received
-		i = 0
+        i = 0
 		#while i < (len(connected_hosts) / 2) + 1
 			#TODO receive responses
-			
+			#self.send_message(self.local_ip, "get", /* req_location */, reply)
 			# Increment counter by 1 each time a replica responds
-			
+
 		#TODO update gamestate of replica
 		
         #Update state from responses once majority is received
         self.current_state = State.NORMAL
 		
-    def recovery_response(self)
+    def recovery_response(self):
+        pass
         #TODO get recovery message
         
         # Get reply
-
+        
         reply = {
-		    "Type": "Recovery_Response",
-		    "N_View": /* View Number */,
-		    "Crashed_Replica": /* IP of crashed replica */
-		    "Log": log,
-		    "N_Operation": /* Operation number */,
-		    "N_Commit": /* Commit number */,
-		    "N_Replica": self.local_ip
-	    }
+            #"Type": "Recovery_Response",
+            #"N_View": /* View Number */,
+            #"Crashed_Replica": /* IP of crashed replica */,
+            #"Log": log,
+            #"N_Operation": /* Operation number */,
+            #"N_Commit": /* Commit number */,
+            "N_Replica": self.local_ip
+            }
 
         # Change below
         self.send_message("post", self.local_ip, reply)
@@ -133,8 +134,8 @@ class replica:
             await self.add_new_replica(a_resp['Primary_IP'])
         self.primary = a_resp['Primary_IP']
         
-        
-        
+
+
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
