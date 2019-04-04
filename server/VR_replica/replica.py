@@ -4,7 +4,6 @@ import asyncio
 import socket
 import secrets
 import json
-import requests
 from aiohttp import web
 import aiohttp
 
