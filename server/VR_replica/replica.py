@@ -110,7 +110,8 @@ class replica:
         txt = await resp.text()
         a_resp = json.loads(txt)
         await self.add_new_replica(a_resp['Primary_IP'])
-        
+        for i in self.connected_hosts:
+            print(i)
         
         
     async def send_message(self, ip_addr, req_type, req_location, data):
