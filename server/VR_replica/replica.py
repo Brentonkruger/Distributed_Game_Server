@@ -48,6 +48,7 @@ class replica:
         self.local_ip = s.getsockname()[0]
         print("IP address: ", self.local_ip)
         s.close()
+        
 
         #start the local loop to allow for asyncio (starts the server)
         
@@ -105,10 +106,14 @@ class replica:
             self.message_out_queue.put((rep.get_address(), msg))
 
     async def request_primary_ip(self):
+        #add local ip
+        self.add_new_replica(self.local_ip)
+        #request primary ip
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
         await self.add_new_replica(a_resp['Primary_IP'])
+        self.primary = a_resp['Primary_IP']
         for i in self.connected_hosts:
             print(i)
         
