@@ -1,47 +1,87 @@
 
 {
     "Message_Types": [
-        // send to GET /PlayerMovement
+
+    //// Client -> Server messages /////
+
+        // send to POST /PlayerMovement
         {
             "Type": "PlayerMovement",
             "Operation": "U",
             "Client_ID": 2,
             "N_Request": 5 
         },
-        // send to GET /ComputeGameState
-        // replies with gamestate
-        {
-            "Type": "GameState",
-            "N_View": 0,
-            "Message":  {
-                "Operation": ["U","D","L","R"]
-            },
-            "N_Operation": 16,
-            "N_Commit": 15
 
-        },
-        // sent in response to POST /Prepare
+        // send to POST /ClientJoin
         {
-            "Type": "PrepareOK",
-            "N_View": 0,
-            "N_Operation": 16,
-            "N_Backup": 1
+            "Type": "ClientJoin",
+            "N_Request": 0 
         },
-        //sent in response to POST /Request
+        //response from ClientJoin is ClientJoinOK
         {
-            "Type": "Reply",
-            "N_View": 0,
-            "Result": ["U","D","L","R"]
+            "Type": "ClientJoinOK",
+            "Client_ID": 1,
+            "N_Request": 0 
         },
+
+        //send to post /Ready
+        {
+            "Type": "Ready",
+            "Client_ID": 2,
+            "N_Request": 5 
+        },//response is OK
+
+
+    //// Server -> Routing messages ////
+        
         // sent to GET /Join
         {
             "Type": "Join"
         },
-        //sent in response to /Join
+        //response from /Join is JoinOK
         {
             "Type": "JoinOK",
             "Primary_IP": "192.0.2.0"
         },
+        //send to /NewPrimary
+        {
+            "Type": "New_Primary",
+            "IP": "192.0.2.0"
+        }, //reply is ok
+
+    ////Server -> Client messages ////
+
+        //send to POST /GameUpdate
+        {
+            "Type": "GameUpdate",
+            "Gamestate": "Gamestate stuff"
+        },
+        //send to POST /GameStart
+        {
+            "Type": "GameStart",
+            "Client_ID": 2,
+            "Gamestate": "Gamestate stuff"
+        },
+
+    //// Primary -> Backup messages ////
+
+        // send to GET /ComputeGameState
+        {
+            "Type": "ComputeGameState",
+            "N_View": 0,
+            "N_Operation": 16,
+            "N_Commit": 15
+        },
+        
+        // send to POST /StartView
+        {
+            "Type": "StartView",
+            "N_View": 1,
+            "Log": "Log things",
+            "N_Operation": 16,
+            "N_Commit": 15
+        },
+
         // sent to POST /UpdateReplicaList
         {
             "Type": "Replica_List",
@@ -51,59 +91,72 @@
                 "192.0.2.0",
                 "192.0.2.0"
             ]
+        },//Reply is OK
+
+    //// Backup -> Primary messages ////
+
+        //response from /ComputeGameState is GameState
+        {
+            "Type": "GameState",
+            "N_View": 0,
+            "N_Operation": 16,
+            "N_Commit": 15
         },
 
+
+    //// Backup -> Backup messages ////
+
+        // send to POST /StartViewChange
         {
-            "Type": "New_Primary",
-            "IP": "192.0.2.0"
+            "N_View": 1,
+            "N_replica": 2
+        },
+        // send to POST /DoViewChange
+        {
+            "Type": "DoViewChange",
+            "N_View": 1,
+            "Log": "Log things",
+            "N_View_Old": 0,
+            "N_Operation": 16,
+            "N_Commit": 15,
+            "N_replica": 2
+        },
+        //send to GET /GetState
+        {
+            "Type": "GetState",
+            "N_View":0,
+            "N_Operation":16,
+            "N_replica":2
+        },
+        //response to /GetState is NewState
+        {
+            "Type": "NewState",
+            "N_View":1,
+            "Log": "Log things",
+            "N_Operation": 16,
+            "N_Commit":15
+        },
+        // send to POST /Recover
+        {
+            "Type": "Recover",
+            "N_replica": 2,
+            "Nonce": "xxxx"
+        },
+        //response from /Recover is RecoveryResponse
+        {
+            "Type": "RecoverResponse",
+            "N_View": 0,
+            "Nonce": "xxxx",
+            "Log": "Log things | none if not primary",
+            "N_Operation": "16 | none if not primary",
+            "N_Commit": "15 | none if not primary",
+            "N_replica": 2
         }
-            
+ 
     ]
 
 }
 
-
-
-
-///////////////////////////////////////////
-// ROUTING LAYER JSON INFORMATION:
-///////////////////////////////////////////
-
-/////// CLIENT FUNCTIONS //////////////////
-
-// 1) route: "/connectPlayer"
-    // connects clients to the game
-    // no json message needed
-
-// 2) route: "/forwardToMainServer"
-    // forwards any json message from client to the main server
-
-
-////// SERVER FUNCTIONS //////////////////
-
-// 1) route: "/updateMainServer"
-    // server tells routing layer who the new main server is after an election
-    // json request: 
-        {
-            "ip": "192.0.2.0"
-        }
-
-// 2) route: "/updatePlayersGameState"
-    // server sends routing layer a single json message with new game state. Routing layer then forwards this message to all players
-
-// 3) route: "/join"
-    //  Server requests routing layaer to join network. Routing layer replies with the IP of the main server
-    //  note: first server to /join is assigned to be the main server in the routing layer
-    // json request: 
-        {
-            "ip": "192.0.2.0"
-        }
-    // json response:
-        {
-            "Type": "JoinOK",
-            "Primary_IP": "192.0.2.1"
-        }
-        
 
 
     

@@ -73,8 +73,7 @@ class replica:
             self.connected_hosts.append(ip_addr)
             await self.replica_broadcast("post", "UpdateReplicaList", self.host_list_to_json())
 
-    async def process_request(self):
-        pass
+    
         
 
     #sending message section
@@ -106,17 +105,40 @@ class replica:
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
 
+    async def process_request(self):
+        pass
+    async def client_join(self):
+        pass
+    async def start_game(self):
+        pass
+    async def compute_gamestate(self):
+        pass
+    async def do_view_change(self):
+        pass
+    async def readied_up(self):
+        pass
+    async def apply_commit(self):
+        pass
+    async def start_view(self):
+        pass
+    async def get_state(self):
+        pass
 
 
     async def http_server_start(self):
         self.session = aiohttp.ClientSession()
         self.app = web.Application()
-        self.app.add_routes([web.get('/JoinOK', self.add_new_replica),
-                            web.post('/Request', self.process_request),
-                            web.post('/ViewChange', self.start_view_change),
+        self.app.add_routes([web.post('/PlayerMovement', self.process_request),
+                            web.post('/ClientJoin', self.client_join),
                             web.post('/Ready', self.readied_up),
+
+                            web.post('/StartViewChange', self.start_view_change),
+                            web.post('/DoViewChange', self.do_view_change),
+                            web.post('/StartView', self.start_view),
                             web.post('/Recover', self.start_recovery),
+                            web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
+                            web.get('/ComputeGamestate', self.compute_gamestate),
                             web.post('/UpdateReplicaList', self.send_replica_list)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
