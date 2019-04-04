@@ -4,6 +4,8 @@ import asyncio
 import socket
 import secrets
 import json
+import requests
+import aiohttp
 
 class Mode(Enum):
     BACKUP = 0
@@ -24,6 +26,7 @@ class Host():
 
     def __lt__(self, other):
         return self.address < other.address
+
 
 
 class replica:
@@ -101,16 +104,48 @@ class replica:
 
     #reading message section
     async def parse_message(self, reader, writer):
-        msg = await reader.read()
-        #parse the message (json) and call the corresponding method to deal with it.
-        print(msg.decode())
-        await self.message_out_queue.put(("192.168.0.10", msg.decode()))
+        text = ""
+        # msg = await reader.read()
+        # text = msg.decode()
+        # print(text)
+        msg = await reader.readline()
+        while(msg != b'\r\n'):
+            print(msg)
+            text += msg.decode()
+            msg = await reader.readline()
+        
+        #from the routing layer
+        if "HTTP" in text:
+            lines = text.split('\n')
+            message_type = lines[0].split(' ')[1].strip('/').split('.')[0]
+            writer.write(b'HTTP/1.1 200 OK\r\nKeep-alive: ')
+            writer.write_eof()
+            print(message_type)
+            # r = requests.get("http://192.168.0.10:5000/join")
+            # r = requests.get("http://127.0.0.1:5000/join")
+        
+        #from other servers
+        #decode json
+
+
+
+            
+
+        # await self.message_out_queue.put(("192.168.0.10", msg.decode()))
 
     async def read_network(self):
 
         #open socket and wait for connection
         a_server = await asyncio.start_server(self.parse_message, port=9999, start_serving = True)
         
+    def createJson(self, type_message):
+        #Create a dictionary of the things you want in the json object, then encode.
+        # json_dict = {type:}
+        pass
+
+    def create_message(self, type_message, ip_addr, port):
+        a_string = "HEAD /" + str(type_message) + " HTTP/1.1\nHost: " + ip_addr + ":" + str(port) + "\nAccept-Encoding: identity\nContent-Length: 0"
+        return a_string
 
         
 
