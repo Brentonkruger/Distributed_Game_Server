@@ -5,6 +5,7 @@ import socket
 import secrets
 import json
 import requests
+import aiohttp
 
 class Mode(Enum):
     BACKUP = 0
@@ -104,23 +105,24 @@ class replica:
     #reading message section
     async def parse_message(self, reader, writer):
         text = ""
-        msg = await reader.read()
-        text = msg.decode()
-        print(text)
-        # msg = await reader.readline()
-        # while(msg != b''):
-        #     print(msg)
-        #     text += msg.decode()
-        #     msg = await reader.readline()
+        # msg = await reader.read()
+        # text = msg.decode()
+        # print(text)
+        msg = await reader.readline()
+        while(msg != b'\r\n'):
+            print(msg)
+            text += msg.decode()
+            msg = await reader.readline()
         
         #from the routing layer
         if "HTTP" in text:
             lines = text.split('\n')
             message_type = lines[0].split(' ')[1].strip('/').split('.')[0]
-            # writer.write(b'HTTP/1.1 200 OK')
-            # writer.write_eof()
+            writer.write(b'HTTP/1.1 200 OK\r\nKeep-alive: ')
+            writer.write_eof()
             print(message_type)
-            r = requests.get("http://192.168.0.10:9998/players")
+            # r = requests.get("http://192.168.0.10:5000/join")
+            # r = requests.get("http://127.0.0.1:5000/join")
         
         #from other servers
         #decode json

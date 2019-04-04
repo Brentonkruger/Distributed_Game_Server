@@ -52,3 +52,4 @@ def join():
 	else:
 		mainServerIP = request.remote_addr
 		return jsonify({'Type': 'JoinOK', "Primary_IP": str(mainServerIP)})
+
