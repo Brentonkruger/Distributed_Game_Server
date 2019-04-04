@@ -9,28 +9,69 @@ class Block(Enum):
     
     def __init__(self, *args):
         self.has_powerup = False
+
+    def __repr__(self):
+        if self == Block.STABLE:
+            return "[S]"
+        if self == Block.CRACKED:
+            return "[C]"
+        if self == Block.HOLE:
+            return "[H]"
      
 class Board:
-        #Create a stable board, with a specified size
-    def __init__(self, length, width):
-        self.board = [[Block.STABLE for i in range(width)]for j in range(length)]
+    
+    #Create a blank board, with a specified size (the width and height of the square board)
+    def __init__(self, size):
+        self.stable_locations = set()
+        self.cracked_locations = set()
+        self.hole_locations = set()
+        self.player_locations = set()
+        self.powerup_locations = set()
+        for i in range(size):
+            for j in range(size):
+                self.stable_locations.add((i,j))
+        self.board = [[Block.STABLE]*size]*size
+        
+
+    def print_board(self):
+        string = ""
+        for i in range(len(self.board)):
+            for j in range(len(self.board)):
+                string = string + repr(self.board[i][j]) 
+            print(string + "\n")
+            string = ""               
     
     def check_block(self,x,y):
         return self.board[x][y]
     
-    def change_block(self,x,y):
-        if self.board[x][y] is Block.STABLE:
+    # Function used to change a block to the next state
+    def change_block(self, x, y):
+        if self.board[x][y] == Block.STABLE:
+            self.stable_locations.remove((x,y))
             self.board[x][y] = Block.CRACKED
-        else:
+            self.cracked_locations.add((x,y))
+        elif self.board[x][y] == Block.CRACKED:
+            self.cracked_locations.remove((x,y))
             self.board[x][y] = Block.HOLE
+            self.hole_locations.add((x,y))
 
     def add_powerup(self, x, y):
-        # Invalid Powerup States
-        if (self.board[x][y].has_powerup == True) or (not self.board[x][y] == Block.STABLE):
+        if (self.board[x][y].has_powerup == True) or (self.board[x][y] == Block.HOLE):
             return False
         else:
             self.board[x][y].has_powerup = True
             return True
+
+    def transition_blocks(self):
+        copy_of_cracked_locations = self.cracked_locations.copy()
+        for tup in copy_of_cracked_locations:
+            self.change_block(tup[0],tup[1])
+
+    def randomly_generate_powerups(self, quantity):
+        return False
+
+    def assign_players(self, number_of_players, board):
+        return False
 
         
 
