@@ -53,7 +53,6 @@ class replica:
 		
         #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-        # json request
         message = {
             "Type": "Recover",
             "N_replica": self.local_ip,
@@ -137,6 +136,37 @@ class replica:
         pass
     async def recovery_help(self, request):
         pass
+        info = json.loads(request)
+        nonce = info["Nonce"]
+        crashed_replica = info["N_replica"]
+
+        # Response
+        # If replica is the primary, send everything
+        if self.current_mode == Mode.PRIMARY:
+            reply = {
+                "Type": "RecoverResponse",
+                #"N_View": /* View Number */,
+                "Nonce": nonce,
+                #"Log": log,
+                #"N_Operation": /* Operation number */,
+                #"N_Commit": /* Commit number */,
+                "N_replica": self.local_ip
+            }
+        # If not, send limited information
+        else:
+            reply = {
+                "Type": "RecoverResponse",
+                #"N_View": /* View Number */,
+                "Crashed_Replica": nonce,
+                "Log": None,
+                "N_Operation": None,
+                "N_Commit": None,
+                "N_replica": self.local_ip
+            }
+
+        # Send reply back to crashed replica
+        self.send_message(self.local_ip, "post", crashed_replica, reply)
+
 
     # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
