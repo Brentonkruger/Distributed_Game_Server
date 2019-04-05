@@ -24,7 +24,7 @@
             "N_Request": 0 
         },
 
-        //send to post /Ready
+        //send to POST /Ready
         {
             "Type": "Ready",
             "Client_ID": 2,
@@ -49,7 +49,7 @@
             "IP": "192.0.2.0"
         }, //reply is ok
 
-    ////Server -> Client messages ////
+    //// Server -> Client messages ////
 
         //send to POST /GameUpdate
         {
@@ -82,9 +82,9 @@
             "N_Commit": 15
         },
 
-        // sent to POST /UpdateReplicaList
+        // response to /GetReplicaList is /UpdateReplicaList
         {
-            "Type": "Replica_List",
+            "Type": "UpdateReplicaList",
             "Replica_List": [
                 "192.0.2.0",
                 "192.0.2.0",
@@ -95,9 +95,15 @@
 
     //// Backup -> Primary messages ////
 
+        // send to GET /GetReplicaList
+        {
+            "Type": "GetReplicaList",
+            "IP": "192.0.2.0"
+        },
+
         //response from /ComputeGameState is GameState
         {
-            "Type": "GameState",
+            "Type": "ComputeGameState",
             "N_View": 0,
             "N_Operation": 16,
             "N_Commit": 15
