@@ -131,6 +131,7 @@ class replica:
 
     async def update_replicas(self, request):
         body = await request.json()
+        body = json.loads(body)
         newList = body["Replica_List"]
         for i in newList:
             if i not in self.all_replicas:
