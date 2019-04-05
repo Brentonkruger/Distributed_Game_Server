@@ -2,6 +2,7 @@ import unittest
 import json
 import secrets
 import socket
+import asyncio
 from VR_replica import replica
 
 class TestingRecovery (unittest.TestCase):

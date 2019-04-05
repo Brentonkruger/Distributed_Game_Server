@@ -4,8 +4,8 @@ import asyncio
 import socket
 import secrets
 import json
-from aiohttp import web
-import aiohttp
+#from aiohttp import web
+#import aiohttp
 
 class Mode(Enum):
     BACKUP = 0
@@ -59,11 +59,20 @@ class replica:
             "Nonce": nonce
 	    }
 		
-        self.replica_broadcast("post", self.local_ip, message)
+        self.replica_broadcast("post", "Recover", message)
 		
 		# Waiting until enough responses received
-
-		#TODO update gamestate of replica
+        i = 0
+        while i < (len(self.connected_hosts) / 2) + 1:
+            for rep in self.connected_hosts:
+                reply = await self.send_message(str(rep), "get", "RecoverResponse", None)
+                response = await reply.text()
+                update = json.loads(response)
+                # Save state information if response is from primary
+                if update["N_replica"] == self.request_primary_ip():
+		            #TODO update state of replica
+                    pass
+                i += 1
 		
         #Update state from responses once majority is received
         self.current_state = State.NORMAL
@@ -114,7 +123,7 @@ class replica:
     # Will replace send_message eventually
     async def add_to_message_queue(self, ip_addr, data):
         pass
-        await self.message_out_queue.put(str(ip_addr), data)
+        await self.message_out_queue.put(data)
         await asyncio.sleep(0)
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -143,7 +152,7 @@ class replica:
         pass
     async def recovery_help(self, request):
         pass
-        info = json.loads(request)
+        info = json.loads(request.json())
         nonce = info["Nonce"]
         crashed_replica = info["N_replica"]
 
@@ -173,7 +182,7 @@ class replica:
 
         # Send reply back to crashed replica
         # Replace once send_message is removed
-        self.send_message(self.local_ip, "post", crashed_replica, reply)
+        self.send_message(self.local_ip, "post", "RecoverResponse", reply)
 
 
     # This starts the http server and listens for the specified http requests
