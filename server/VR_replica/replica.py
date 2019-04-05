@@ -58,17 +58,10 @@ class replica:
 
         #Update state from responses until majority is recieved
         self.current_state = State.NORMAL
-
-    async def start_view_change(self, request):
-        self.current_state = State.VIEW_CHANGE
-        #TODO: run the view change protocol
-        self.current_state = State.NORMAL
     
-
     async def replica_broadcast(self, req_type, req_location, msg):
         for rep in self.other_replicas:
             await self.send_message(str(rep),req_type, req_location, msg)
-
 
     async def request_primary_ip(self):
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
@@ -81,14 +74,17 @@ class replica:
             #connect to primary and ask for updated replica list
             body = {"Type": "GetReplicaList", "IP": self.local_ip}
             await self.send_message(self.primary, "get", "GetReplicaList", json.dumps(body))
-
-        
         
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
+            
+    async def start_view_change(self, request):
+        self.current_state = State.VIEW_CHANGE
+        #TODO: run the view change protocol
+        self.current_state = State.NORMAL
 
     async def player_move(self, request):
         pass
