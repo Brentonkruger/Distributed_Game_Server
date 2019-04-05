@@ -105,6 +105,11 @@ class Board:
         newPlayer.current_location = (chosen_tile[0][0], chosen_tile[0][1])
         self.player_list.append(newPlayer)
 
+    def assign_player_with_location(self, player_id, x, y):
+        newPlayer = player.Player(player_id)
+        newPlayer.current_location = (x, y)
+        self.player_list.append(newPlayer)
+
     def get_player_locations(self):
         player_locations = []
         for player in self.player_list:
@@ -126,8 +131,27 @@ class Board:
         sorted_player_list_by_power = sorted(self.player_list, key=lambda player: player.power, reverse=True)
         # From highest to lowest in power amount
         for player in sorted_player_list_by_power:
+            intended_location = (player.current_location[0], player.current_location[1])
             # If we wanted to do multiple moves a turn, we would have a for loop for each movement here
-            if player.intended_movement == "U":
-                # player.current_location = (player.current_location[]
-                player.current_location = (player.current_location[0] + 1, player.current_location[1])
+            if (player.intended_movement() == ["U"]) and (player.current_location[0] > 0):
+                intended_location = (intended_location[0] - 1, intended_location[1])
+
+            if (player.intended_movement() == ["D"]) and (player.current_location[0] < len(self.board[0]) - 1):
+                intended_location = (intended_location[0] + 1, intended_location[1])
+
+            if (player.intended_movement() == ["L"]) and (player.current_location[1] > 0):
+                intended_location = (intended_location[0], intended_location[1] - 1)
+
+            if (player.intended_movement() == ["R"]) and (player.current_location[1] < len(self.board[0]) - 1):
+                intended_location = (intended_location[0], intended_location[1] + 1)
+
+            if player.intended_movement() == ["N"]:
+                intended_location = (intended_location[0], intended_location[1])
+
+            #TODO: Check for collisions or something based on these intended locations, rather than assign them
+            player.current_location = intended_location
+            
+            
+            
+
         
