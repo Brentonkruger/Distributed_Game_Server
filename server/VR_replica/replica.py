@@ -153,9 +153,6 @@ class replica:
         self.primary = a_resp['Primary_IP']
         
 
-    async def add_to_message_queue(self, ):
-
-
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
