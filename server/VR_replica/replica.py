@@ -4,8 +4,8 @@ import asyncio
 import socket
 import secrets
 import json
-#from aiohttp import web
-#import aiohttp
+from aiohttp import web
+import aiohttp
 
 class Mode(Enum):
     BACKUP = 0
@@ -15,7 +15,6 @@ class State(Enum):
     NORMAL = 0
     VIEW_CHANGE = 1
     RECOVERING = 2
-
 
 class replica:
     
@@ -69,46 +68,10 @@ class replica:
 		
         #Update state from responses once majority is received
         self.current_state = State.NORMAL
-		
-    def recovery_response(self):
-        pass
-        #TODO get recovery message
-        #jsonToDecode = self.send_message(self.local_ip, "get", /* ip of crashed replica */, message)
-        
-        #info = json.loads(jsonToDecode)
-        #nonce = info["Nonce"]
-        #crashed_replica = info["N_replica"]
-
-        # Get reply
-        # If replica is the primary, send everything
-        if self.current_mode == Mode.PRIMARY:
-            reply = {
-                "Type": "RecoverResponse",
-                #"N_View": /* View Number */,
-                #"Nonce": nonce,
-                #"Log": log,
-                #"N_Operation": /* Operation number */,
-                #"N_Commit": /* Commit number */,
-                "N_replica": self.local_ip
-            }
-        # If not, send limited information
-        else:
-            reply = {
-                "Type": "RecoverResponse",
-                #"N_View": /* View Number */,
-                #"Crashed_Replica": nonce,
-                "Log": None,
-                "N_Operation": None,
-                "N_Commit": None,
-                "N_replica": self.local_ip
-            }
-
-        # Send reply back to crashed replica
-        #self.send_message(self.local_ip, "post", crashed_replica, reply)
 
 		# WORKING ON ABOVE
 
-    def start_view_change(self):
+    async def start_view_change(self, request):
         self.current_state = State.VIEW_CHANGE
         #TODO: run the view change protocol
         self.current_state = State.NORMAL
@@ -123,11 +86,14 @@ class replica:
             self.connected_hosts.append(ip_addr)
             await self.replica_broadcast("post", "UpdateReplicaList", self.host_list_to_json())
 
-    async def process_request(self):
-        pass
+    
         
 
     #sending message section
+
+    async def send_replica_list(self, request):
+        print(request)
+        pass
 
     async def replica_broadcast(self, req_type, req_location, msg):
         for rep in self.connected_hosts:
@@ -151,19 +117,46 @@ class replica:
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
 
+    async def process_request(self, request):
+        pass
+    async def client_join(self, request):
+        pass
+    async def start_game(self, request):
+        pass
+    async def compute_gamestate(self, request):
+        pass
+    async def do_view_change(self, request):
+        pass
+    async def readied_up(self, request):
+        pass
+    async def apply_commit(self, request):
+        pass
+    async def start_view(self, request):
+        pass
+    async def get_state(self, request):
+        pass
+    async def recovery_help(self, request):
+        pass
 
-
+    # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
         self.session = aiohttp.ClientSession()
         self.app = web.Application()
-        self.app.add_routes([web.get('/JoinOK', self.add_new_replica),
-                            web.post('/Request', self.process_request)])
+        # add routes that we will need for this system with the corresponding coroutines
+        self.app.add_routes([web.post('/PlayerMovement', self.process_request),
+                            web.post('/ClientJoin', self.client_join),
+                            web.post('/Ready', self.readied_up),
+
+                            web.post('/StartViewChange', self.start_view_change),
+                            web.post('/DoViewChange', self.do_view_change),
+                            web.post('/StartView', self.start_view),
+                            web.post('/Recover', self.recovery_help),
+                            web.post('/GetState', self.get_state),
+                            web.post('/Commit', self.apply_commit),
+                            web.get('/ComputeGamestate', self.compute_gamestate)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.local_ip, 9999)
         await self.site.start()
 
-    
-        
-    
 
