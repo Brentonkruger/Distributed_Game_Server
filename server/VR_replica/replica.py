@@ -21,7 +21,8 @@ class replica:
     def __init__(self, routing_ip):
         self.current_mode = Mode.BACKUP
         self.current_state = State.NORMAL
-        self.connected_hosts = []
+        self.other_replicas = []
+        self.all_replicas = []
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
 
@@ -32,6 +33,7 @@ class replica:
         self.local_ip = s.getsockname()[0]
         print("IP address: ", self.local_ip)
         s.close()
+        self.all_replicas.append(self.local_ip)
         
 
         #start the local loop to allow for asyncio (starts the server)       
@@ -62,32 +64,22 @@ class replica:
         #TODO: run the view change protocol
         self.current_state = State.NORMAL
     
-    def host_list_to_json(self):
-        hosts = {"Type": "Replica_List", "Replica_List":self.connected_hosts}
-        return json.dumps(hosts)
-    
-    #add a new replica with the ip address in form "xxx.xxx.xxx.xxx"
-    async def add_new_replica(self, ip_addr):
-        if ip_addr not in self.connected_hosts:
-            self.connected_hosts.append(ip_addr)
-            await self.replica_broadcast("post", "UpdateReplicaList", self.host_list_to_json())
-
 
     async def replica_broadcast(self, req_type, req_location, msg):
-        for rep in self.connected_hosts:
+        for rep in self.other_replicas:
             await self.send_message(str(rep),req_type, req_location, msg)
 
 
     async def request_primary_ip(self):
-        #add local ip
-        # await self.add_new_replica(self.local_ip)
-        #request primary ip
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
         if a_resp['Primary_IP'] != self.local_ip:
-            await self.add_new_replica(a_resp['Primary_IP'])
+            self.other_replicas.append(a_resp['Primary_IP'])
+            self.all_replicas.append(a_resp['Primary_IP'])
         self.primary = a_resp['Primary_IP']
+        #connect to primary and ask for updated replica list
+
         
         
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -119,10 +111,29 @@ class replica:
     async def replica_list(self, request):
         #format the replica list and return it to the backup
         if self.local_ip == self.primary:
-            print(request)
+            if request.remote != self.local_ip:
+                if request.remote not in self.all_replicas:
+                    self.all_replicas.append(request.remote)
+                if request.remote not in self.other_replicas:
+                    self.other_replicas.append(request.remote)
+
+            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List":self.all_replicas})
+            await self.replica_broadcast("post", "UpdateReplicaList", body)
             return web.Response()
         else: 
-            return web.Response(status = 500, body = json.dumps({"Primary_IP": self.primary}))
+            return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
+
+    async def update_replicas(self, request):
+        body = await request.json()
+        newList = body["Replica_List"]
+        for i in newList:
+            if i not in self.all_replicas:
+                self.all_replicas.append(i)
+            if i not in self.other_replicas and i != self.local_ip:
+                self.other_replicas.append(i)
+        for i in self.other_replicas:
+            print(i)
+        return web.Response()
 
     # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
@@ -140,6 +151,7 @@ class replica:
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
                             web.get('/GetReplicaList', self.replica_list),
+                            web.post('/UpdateReplicaList', self.update_replicas),
                             web.get('/ComputeGamestate', self.compute_gamestate)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
