@@ -48,7 +48,7 @@ class replica:
 
 
 		# WORKING HERE
-    async def start_recovery(self):
+    async def start_recovery(self, request):
         self.current_state = State.RECOVERING
 		
         #Send broadcast to all replicas with random nonce and its address
@@ -112,8 +112,10 @@ class replica:
         self.primary = a_resp['Primary_IP']
         
     # Will replace send_message eventually
-    async def add_to_message_queue(self, ip_addr, req_type, data):
+    async def add_to_message_queue(self, ip_addr, data):
         pass
+        await self.message_out_queue.put(str(ip_addr), data)
+        await asyncio.sleep(0)
 
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
