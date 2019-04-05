@@ -116,6 +116,7 @@ class replica:
             if request.remote != self.local_ip:
                 if request.remote not in self.all_replicas:
                     self.all_replicas.append(request.remote)
+                    print("Added\t" + request.remote)
                 if request.remote not in self.other_replicas:
                     self.other_replicas.append(request.remote)
 
@@ -138,8 +139,6 @@ class replica:
                 self.all_replicas.append(i)
             if i not in self.other_replicas and i != self.local_ip:
                 self.other_replicas.append(i)
-        for i in self.other_replicas:
-            print(i)
         return web.Response()
 
     # This starts the http server and listens for the specified http requests
