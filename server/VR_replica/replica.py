@@ -16,7 +16,6 @@ class State(Enum):
     VIEW_CHANGE = 1
     RECOVERING = 2
 
-
 class replica:
     
     def __init__(self, routing_ip):
@@ -123,6 +122,8 @@ class replica:
         pass
     async def get_state(self, request):
         pass
+    async def recovery_help(self, request):
+        pass
 
     # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
@@ -136,7 +137,7 @@ class replica:
                             web.post('/StartViewChange', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
-                            web.post('/Recover', self.start_recovery),
+                            web.post('/Recover', self.recovery_help),
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
                             web.get('/ComputeGamestate', self.compute_gamestate)])
