@@ -79,6 +79,8 @@ class replica:
             self.all_replicas.append(a_resp['Primary_IP'])
         self.primary = a_resp['Primary_IP']
         #connect to primary and ask for updated replica list
+        body = {"Type": "GetReplicaList", "IP": self.local_ip}
+        self.send_message(self.primary, "get", "GetReplicaList", json.dumps(body))
 
         
         
