@@ -29,12 +29,16 @@ class Timer:
     def cancel(self):
         self._task.cancel()
     
-    def restart(self, timeout = None, callback = None):
-        self._task.cancel()
+    def start(self, timeout = None, callback = None):
         if callback is not None:
             self.callback = callback
         if timeout is not None:
             self.timeout = timeout
+        self._task = asyncio.ensure_future(self._job())
+
+    
+    def restart(self):
+        self._task.cancel()
         self.task = asyncio.ensure_future(self._job())
 
 class replica:
@@ -49,8 +53,8 @@ class replica:
         self.n_view = 0
         self.n_commit = 0
         self.n_operation = 0
-        #The log will be a dictionary of the events that have occurred, with the key being the hash of the value entered
-        self.log = {}
+        #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
+        self.log = []
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -77,6 +81,7 @@ class replica:
 
 
     async def start_recovery(self, request):
+        #stop timer running
         self.current_state = State.RECOVERING
         #TODO: run the recovery protocol
         #Send broadcast to all replicas with random nonce 
@@ -95,10 +100,10 @@ class replica:
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
-        self.timer.restart()
-        print("restarted timer")
-        body = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
-        resp = await self.replica_broadcast("post", "Commit", body)
+        self.timer.cancel()
+        msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
+        resp = await self.replica_broadcast("post", "Commit", msg)
+        self.timer.start()
 
     async def replica_broadcast(self, req_type, req_location, msg):
         a_status = 200
@@ -118,8 +123,8 @@ class replica:
             self.all_replicas.append(a_resp['Primary_IP'])
 
             #connect to primary and ask for updated replica list
-            body = {"Type": "GetReplicaList", "IP": self.local_ip}
-            await self.send_message(self.primary, "get", "GetReplicaList", json.dumps(body))
+            msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
+            await self.send_message(self.primary, "get", "GetReplicaList", msg)
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(10, self.send_view_change)
@@ -139,17 +144,23 @@ class replica:
         self.current_state = State.NORMAL
 
     async def player_move(self, request):
+        #check if the move has already been made (op number)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            body = await request.json()
-            resp = await self.replica_broadcast("post", "PlayerMovement", body)
+            msg = await request.json()
+            # add fields needed for the replicas (commit number op number etc.)
+            resp = await self.replica_broadcast("post", "PlayerMovement", msg)
             #TODO:apply update
+            
+            #update commit number
             return web.Response()
 
 
         #backups recieve the player move and adds it to the gamestate, then replies when it's finished
         else:
             #TODO:apply update
+            #update operation number
+            #update commit number
             return web.Response()
 
     async def client_join(self, request):
@@ -179,7 +190,6 @@ class replica:
         #     "N_Commit": 15,
         #     "N_replica": 2
         # }
-
         #TODO: implement
         pass
 
@@ -190,37 +200,45 @@ class replica:
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
-        #TODO: implement
-        pass
+        self.timer.cancel()
+        msg = await request.json()
+        text = json.loads(msg)
+        if text["N_View"] > self.n_view:
+            #go into recovery mode
+            # TODO: implement
+            pass
+        elif text["n_commit"] > self.n_commit:
+            #go into state transfer mode
+            # TODO: implement
+            pass
+        else:  
+            return web.Response()
+            
+        self.timer.start()
+        #don't update client about this one.
 
     async def start_view(self, request):
         #recieve the new view message to begin the next view
-        
+        #TODO: implement
         return web.Request()
         
 
     async def get_state(self, request):
-        # respond with the newstate packet
-        # {
-        #     "Type": "NewState",
-        #     "N_View":1,
-        #     "Log": "Log things",
-        #     "N_Operation": 16,
-        #     "N_Commit":15
-        # }
-
-
-        pass
+        msg = json.dumps({"Type": "NewState","N_View":self.n_view,"Log":self.log[-1],"N_Operation":self.n_operation,"N_Commit":self.n_commit})
+        return web.Response(body = msg)
 
     async def recovery_help(self, request):
         #send back the recover message
         if self.primary == self.local_ip:
             #return the intense answer
+            #TODO: implement
             pass
         else:
             #return the small answer
-            pass
-        pass
+            body = await request.json()
+            text = json.loads(body)
+            msg = json.dumps({"Type": "RecoveryResponse","N_View":self.n_view,"Nonce":text['Nonce'],"Log":"Nil","N_Operation":"Nil","N_Commit":"Nil"})
+            return web.Response(body = msg)
 
     async def replica_list(self, request):
         #format the replica list and return it to the backup
