@@ -4,7 +4,6 @@ from enum import Enum
 import random
 from . import player
 
-
 class BlockState(Enum):
     STABLE = 0
     CRACKED = 1
@@ -112,4 +111,23 @@ class Board:
             player_locations.append(player.current_location)
         return player_locations
 
+    def get_player_by_id(self, player_id):
+        return next((player for player in self.player_list if player.id == player_id), None)
+        
 
+    def set_player_movement_direction(self, player_id, move_list):
+        requested_player = self.get_player_by_id(player_id)
+        if not requested_player == None:
+            requested_player.change_movement(move_list)
+        else:
+            return False
+
+    def calculate_player_finished_positions(self):
+        sorted_player_list_by_power = sorted(self.player_list, key=lambda player: player.power, reverse=True)
+        # From highest to lowest in power amount
+        for player in sorted_player_list_by_power:
+            # If we wanted to do multiple moves a turn, we would have a for loop for each movement here
+            if player.intended_movement == "U":
+                # player.current_location = (player.current_location[]
+                player.current_location = (player.current_location[0] + 1, player.current_location[1])
+        
