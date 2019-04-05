@@ -74,13 +74,13 @@ class replica:
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
+        self.primary = a_resp['Primary_IP']
         if a_resp['Primary_IP'] != self.local_ip:
             self.other_replicas.append(a_resp['Primary_IP'])
             self.all_replicas.append(a_resp['Primary_IP'])
-        self.primary = a_resp['Primary_IP']
-        #connect to primary and ask for updated replica list
-        body = {"Type": "GetReplicaList", "IP": self.local_ip}
-        self.send_message(self.primary, "get", "GetReplicaList", json.dumps(body))
+            #connect to primary and ask for updated replica list
+            body = {"Type": "GetReplicaList", "IP": self.local_ip}
+            self.send_message(self.primary, "get", "GetReplicaList", json.dumps(body))
 
         
         
