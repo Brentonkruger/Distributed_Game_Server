@@ -72,18 +72,11 @@ class replica:
             self.connected_hosts.append(ip_addr)
             await self.replica_broadcast("post", "UpdateReplicaList", self.host_list_to_json())
 
-    
-        
-
-    #sending message section
-
-    async def send_replica_list(self, request):
-        print(request)
-        pass
 
     async def replica_broadcast(self, req_type, req_location, msg):
         for rep in self.connected_hosts:
             await self.send_message(str(rep),req_type, req_location, msg)
+
 
     async def request_primary_ip(self):
         #add local ip
@@ -97,14 +90,13 @@ class replica:
         self.primary = a_resp['Primary_IP']
         
         
-        
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
 
-    async def process_request(self, request):
+    async def player_move(self, request):
         pass
     async def client_join(self, request):
         pass
@@ -124,13 +116,20 @@ class replica:
         pass
     async def recovery_help(self, request):
         pass
+    async def replica_list(self, request):
+        #format the replica list and return it to the backup
+        if self.local_ip == self.primary:
+            print(request)
+            return web.Response()
+        else: 
+            return web.Response(status = 500, body = json.dumps({"Primary_IP": self.primary}))
 
     # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
         self.session = aiohttp.ClientSession()
         self.app = web.Application()
         # add routes that we will need for this system with the corresponding coroutines
-        self.app.add_routes([web.post('/PlayerMovement', self.process_request),
+        self.app.add_routes([web.post('/PlayerMovement', self.player_move),
                             web.post('/ClientJoin', self.client_join),
                             web.post('/Ready', self.readied_up),
 
@@ -140,6 +139,7 @@ class replica:
                             web.post('/Recover', self.recovery_help),
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
+                            web.get('/GetReplicaList', self.replica_list),
                             web.get('/ComputeGamestate', self.compute_gamestate)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
