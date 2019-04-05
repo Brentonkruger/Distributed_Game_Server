@@ -109,6 +109,10 @@ class replica:
             await self.add_new_replica(a_resp['Primary_IP'])
         self.primary = a_resp['Primary_IP']
         
+    # Will replace send_message eventually
+    async def add_to_message_queue(self, ip_addr, req_type, data):
+        pass
+        await self.message_out_queue.put(ip_addr, req_type, data)
 
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
@@ -165,6 +169,7 @@ class replica:
             }
 
         # Send reply back to crashed replica
+        # Replace once send_message is removed
         self.send_message(self.local_ip, "post", crashed_replica, reply)
 
 
