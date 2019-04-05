@@ -64,14 +64,6 @@ class replica:
         self.replica_broadcast("post", self.local_ip, message)
 		
 		# Waiting until enough responses received
-        i = 0
-        while i < (len(self.connected_hosts) / 2) + 1:
-            #TODO receive responses
-            for replica_ip in self.connected_hosts:
-                response = self.send_message(self.local_ip, "get", replica_ip, None)
-                if response != None:
-                    i += 1
-                    break
 
 		#TODO update gamestate of replica
 		
