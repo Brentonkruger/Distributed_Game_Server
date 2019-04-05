@@ -121,10 +121,6 @@ class replica:
                     self.other_replicas.append(request.remote)
 
             body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas]})
-            print(body)
-            for i in self.all_replicas:
-                print(i)
-            # print([i for i in self.all_replicas])
             await self.replica_broadcast("post", "UpdateReplicaList", body)
             return web.Response()
         else: 
