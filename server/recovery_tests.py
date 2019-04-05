@@ -8,7 +8,6 @@ class TestingRecovery (unittest.TestCase):
     
     # Testing recovery message broadcast
     def test_recovery_broadcast(self):
-        self.rep = replica.replica
         return False
 
     # Testing recovery response

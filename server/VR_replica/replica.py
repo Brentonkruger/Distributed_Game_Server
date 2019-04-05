@@ -4,8 +4,8 @@ import asyncio
 import socket
 import secrets
 import json
-from aiohttp import web
-import aiohttp
+#from aiohttp import web
+#import aiohttp
 
 class Mode(Enum):
     BACKUP = 0
@@ -54,23 +54,24 @@ class replica:
 		
         #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
+        # json request
         message = {
-            "Type": "Recovery_Message",
-            "N_Replica": self.local_ip,
+            "Type": "Recover",
+            "N_replica": self.local_ip,
             "Nonce": nonce
 	    }
-
-	    # Convert message to JSON
-        jsonToSend = json.dumps(message)
 		
         self.replica_broadcast("post", self.local_ip, message)
 		
 		# Waiting until enough responses received
         i = 0
-		#while i < (len(connected_hosts) / 2) + 1
-			#TODO receive responses
-			#self.send_message(self.local_ip, "get", /* req_location */, reply)
-			# Increment counter by 1 each time a replica responds
+        while i < (len(self.connected_hosts) / 2) + 1:
+            #TODO receive responses
+            for replica_ip in self.connected_hosts:
+                response = self.send_message(self.local_ip, "get", replica_ip, None)
+                if response != None:
+                    i += 1
+                    break
 
 		#TODO update gamestate of replica
 		
@@ -80,21 +81,38 @@ class replica:
     def recovery_response(self):
         pass
         #TODO get recovery message
+        #jsonToDecode = self.send_message(self.local_ip, "get", /* ip of crashed replica */, message)
         
+        #info = json.loads(jsonToDecode)
+        #nonce = info["Nonce"]
+        #crashed_replica = info["N_replica"]
+
         # Get reply
-        
-        reply = {
-            #"Type": "Recovery_Response",
-            #"N_View": /* View Number */,
-            #"Crashed_Replica": /* IP of crashed replica */,
-            #"Log": log,
-            #"N_Operation": /* Operation number */,
-            #"N_Commit": /* Commit number */,
-            "N_Replica": self.local_ip
+        # If replica is the primary, send everything
+        if self.current_mode == Mode.PRIMARY:
+            reply = {
+                "Type": "RecoverResponse",
+                #"N_View": /* View Number */,
+                #"Nonce": nonce,
+                #"Log": log,
+                #"N_Operation": /* Operation number */,
+                #"N_Commit": /* Commit number */,
+                "N_replica": self.local_ip
+            }
+        # If not, send limited information
+        else:
+            reply = {
+                "Type": "RecoverResponse",
+                #"N_View": /* View Number */,
+                #"Crashed_Replica": nonce,
+                "Log": None,
+                "N_Operation": None,
+                "N_Commit": None,
+                "N_replica": self.local_ip
             }
 
-        # Change below
-        self.send_message("post", self.local_ip, reply)
+        # Send reply back to crashed replica
+        #self.send_message(self.local_ip, "post", crashed_replica, reply)
 
 		# WORKING ON ABOVE
 
@@ -134,6 +152,8 @@ class replica:
             await self.add_new_replica(a_resp['Primary_IP'])
         self.primary = a_resp['Primary_IP']
         
+
+    async def add_to_message_queue(self, ):
 
 
     async def send_message(self, ip_addr, req_type, req_location, data):
