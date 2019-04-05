@@ -93,6 +93,13 @@
             ]
         },//Reply is OK
 
+        // send to POST /Commit
+        {
+            "Type": "Commit",
+            "N_View": 0,
+            "N_Commit": 15
+        },
+
     //// Backup -> Primary messages ////
 
         // send to GET /GetReplicaList
