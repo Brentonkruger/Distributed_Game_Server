@@ -106,7 +106,6 @@ class TestingBoard(unittest.TestCase):
 
         # Set two blocks to cracked, then run transition function
         self.brd.change_block(1,1)
-
         self.brd.add_powerup(1,1)
         self.assertTrue(self.brd.check_block(1,1).has_powerup)
         self.brd.transition_blocks()
@@ -150,10 +149,26 @@ class TestingBoard(unittest.TestCase):
         self.assertEqual(len(self.brd.powerup_locations), 1)
     
     def test_gamestate_move_players(self):
+        self.brd = board.Board(10)
+        self.brd.assign_players(1)
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+
+    def test_gamestate_complete_turn_no_collisions(self):
+        self.brd = board.Board(10)
+        self.brd.assign_players(5)
+        self.brd.get_player_by_id(1).add_power(11)
+        self.brd.get_player_by_id(3).add_power(4)
+        self.brd.get_player_by_id(4).add_power(10)
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.brd.calculate_player_finished_positions()
+
+    def test_gamestate_player_running_o_o_b(self):
         return False
 
-    def test_gamestate_complete_turn(self):
+    def test_player_powerup_pickup(self):
         return False
+
 
 if __name__ == '__main__':
     unittest.main()

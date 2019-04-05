@@ -7,7 +7,7 @@ class Player:
         # Unassigned value of the player
         self.current_location = (-1, -1)
     
-    def current_movement(self, movelist):
+    def change_movement(self, movelist):
         self.movement = movelist
 
     def intended_movement(self):
