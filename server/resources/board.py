@@ -1,7 +1,7 @@
 #The logic for all gamestate code
 
 from enum import Enum
-import random
+import random, json
 from . import player
 
 class BlockState(Enum):
@@ -92,6 +92,17 @@ class Board:
                 if len(avalible_locations) > 0:
                     chosen_tile = (random.sample(avalible_locations, 1))
                     self.add_powerup(chosen_tile[0][0], chosen_tile[0][1])
+
+    def randomly_generate_cracked_location(self, quantity):
+        # We cannot generate more powerups than there are stable locations
+        if quantity > len(self.stable_locations):
+            quantity = len(self.stable_locations)
+        if quantity > 0:
+            for cracked_location in range(quantity): 
+                avalible_locations = self.stable_locations.copy()
+                if len(avalible_locations) > 0:
+                    chosen_tile = (random.sample(avalible_locations, 1))
+                    self.change_block(chosen_tile[0][0], chosen_tile[0][1])
             
     def assign_players(self, number_of_players):
         for value in range(number_of_players):
@@ -246,11 +257,32 @@ class Board:
         self.calculate_player_finished_positions()
         for player in self.player_list.values():
             if player.current_location in self.hole_locations:
-                print("you have died sir.")
                 player.dead = True
             if player.current_location in self.powerup_locations:
                 player.add_power(1)
                 self.remove_powerup(player.current_location[0], player.current_location[1])
         self.randomly_generate_powerups(int(len(self.board[0]) / 5) + 1)
+        self.randomly_generate_cracked_location(int(len(self.board[0]) / 3) + 1)
+
+        returned_json = {}
+        returned_json["powerup_locations"] = self.powerup_locations
+        returned_json["cracked_locations"] = self.cracked_locations
+        returned_json["stable_locations"] = self.stable_locations
+        returned_json["hole_locations"] = self.hole_locations
+        player_json = []
+        player_list_copy = self.player_list.copy()
+        for player in player_list_copy.values():
+            player_quals = {}
+            player_quals["id"] = player.id
+            player_quals["current_location"] = player.current_location
+            player_quals["power"] = player.power
+            if player.dead:
+                player_quals["dead"] = player.dead
+                del self.player_list[player.id]
+            
+                
+            player_json.append(player_quals)
+
+
+        return(player_json)
         
-    

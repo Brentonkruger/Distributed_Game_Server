@@ -341,10 +341,10 @@ class TestingBoard(unittest.TestCase):
 
         # 1 because one was picked up, and one was spawned.
         self.assertEqual(len(self.brd.powerup_locations), 1)
+        self.assertFalse(1 in self.brd.player_list)
 
-        self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
-        self.assertTrue(self.brd.get_player_by_id(1).dead)
-        
+        # Two new cracked locations were spawned, and one location was turned into a hole!
+        self.assertEqual(len(self.brd.cracked_locations), 2)        
 
 
         self.brd.complete_turn()
