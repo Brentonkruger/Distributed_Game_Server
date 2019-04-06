@@ -242,8 +242,19 @@ class TestingBoard(unittest.TestCase):
         self.brd.calculate_player_finished_positions()
         self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,0))
         
-    def test_gamestate_complete_turn_no_collisions(self):
-        return False
+    def test_gamestate_move_with_collisions_of_same_power(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 0, 2)
+        self.brd.assign_player_with_location(1, 2, 2)
+        self.brd.assign_player_with_location(2, 1, 1)
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.brd.set_player_movement_direction(1, ["U"])
+        self.brd.set_player_movement_direction(2, ["R"])
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (2,2))
+        self.assertEqual(self.brd.get_player_by_id(2).current_location, (1,1))
 
     def test_player_powerup_pickup(self):
         return False
