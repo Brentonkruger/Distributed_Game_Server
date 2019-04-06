@@ -236,8 +236,8 @@ class replica:
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
         self.timer.cancel()
-        text = await request.json()
-        # text = json.loads(msg)
+        msg = await request.json()
+        text = json.loads(msg)
         if text["N_View"] > self.n_view:
             await self.start_recovery()
         if text["N_Commit"] > self.n_commit:
