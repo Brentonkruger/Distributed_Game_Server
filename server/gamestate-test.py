@@ -256,6 +256,71 @@ class TestingBoard(unittest.TestCase):
         self.assertEqual(self.brd.get_player_by_id(1).current_location, (2,2))
         self.assertEqual(self.brd.get_player_by_id(2).current_location, (1,1))
 
+    def test_gamestate_move_into_higher_power(self):
+        self.brd = board.Board(2)
+        self.brd.assign_player_with_location(0, 0, 2)
+        self.brd.assign_player_with_location(1, 1, 2)
+
+        # Player 1 is stronger, and will go first.
+        self.brd.get_player_by_id(0).add_power(1)
+
+        self.brd.set_player_movement_direction(0, ["S"])
+        self.brd.set_player_movement_direction(1, ["U"])
+
+        self.brd.calculate_player_finished_positions()
+
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
+
+    def test_gamestate_move_into_lower_power_push(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 1, 2)
+        self.brd.assign_player_with_location(1, 2, 2)
+
+        # Player 1 is stronger, and will go first.
+        self.brd.get_player_by_id(1).add_power(1)
+
+        self.brd.set_player_movement_direction(0, ["S"])
+        self.brd.set_player_movement_direction(1, ["U"])
+
+        self.brd.calculate_player_finished_positions()
+
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
+
+    def test_gamestate_move_into_lower_power_squish_from_wall(self):
+        self.brd = board.Board(2)
+        self.brd.assign_player_with_location(0, 0, 2)
+        self.brd.assign_player_with_location(1, 1, 2)
+
+        # Player 1 is stronger, and will go first.
+        self.brd.get_player_by_id(1).add_power(1)
+
+        self.brd.set_player_movement_direction(0, ["S"])
+        self.brd.set_player_movement_direction(1, ["U"])
+
+        self.brd.calculate_player_finished_positions()
+
+        self.assertTrue(self.brd.get_player_by_id(0).dead)
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (0,2))
+
+    def test_gamestate_move_into_lower_power_squish_from_player(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 1, 2)
+        self.brd.assign_player_with_location(1, 2, 2)
+        self.brd.assign_player_with_location(2, 0, 2)
+
+        # Player 1 is stronger, and will go first.
+        self.brd.get_player_by_id(1).add_power(1)
+
+        self.brd.set_player_movement_direction(0, ["S"])
+        self.brd.set_player_movement_direction(1, ["U"])
+
+        self.brd.calculate_player_finished_positions()
+
+        self.assertTrue(self.brd.get_player_by_id(0).dead)
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
+
     def test_player_powerup_pickup(self):
         return False
 

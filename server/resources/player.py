@@ -4,6 +4,7 @@ class Player:
         self.power = 0
         self.movement = []
         self.id = id
+        self.dead = False
         # Unassigned value of the player
         self.current_location = (-1, -1)
     
