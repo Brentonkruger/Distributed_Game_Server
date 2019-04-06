@@ -262,7 +262,7 @@ class replica:
         if self.primary == self.local_ip:
             reply = {
                 "Type": "RecoverResponse",
-                "N_View": self.n_View,
+                "N_View": self.n_view,
                 "Nonce": nonce,
                 "Log": self.log,
                 "N_Operation": self.n_operation,
