@@ -20,7 +20,7 @@ class Timer:
     def __init__(self, timeout, callback):
         self._timeout = timeout
         self._callback = callback
-        self._task = asyncio.ensure_future(self._job())
+        # self._task = asyncio.ensure_future(self._job())
 
     async def _job(self):
         await asyncio.sleep(self._timeout)
@@ -53,6 +53,8 @@ class replica:
         self.n_view = 0
         self.n_commit = 0
         self.n_operation = 0
+        self.n_recovery_messages = 0
+        self.primary_recovery_response = False
         #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
         self.log = []
 
@@ -64,8 +66,6 @@ class replica:
         print("IP address: ", self.local_ip)
         s.close()
         self.all_replicas.append(self.local_ip)
-        
-        
 
         #start the local loop to allow for asyncio (starts the server)       
         self.loop = asyncio.get_event_loop()
@@ -79,41 +79,40 @@ class replica:
             self.loop.close()
         
 
-
-		# WORKING HERE
-    async def start_recovery(self, request):
-        #stop timer running
+    async def start_recovery(self):
         self.current_state = State.RECOVERING
-		
+        self.n_recovery_messages = 0
+        self.timer.cancel()
+
         #Send broadcast to all replicas with random nonce and its address
-        nonce = secrets.randbits(32)
-        message = {
+        self.recovery_nonce = secrets.randbits(32)
+        message = json.dumps({
             "Type": "Recover",
             "N_replica": self.local_ip,
-            "Nonce": nonce
-	    }
-		
+            "Nonce": self.recovery_nonce
+	    })
         self.replica_broadcast("post", "Recover", message)
-		
-		# Waiting until enough responses received
-        i = 0
-        while i < (len(self.other_replicas) / 2) + 1:
-            reply = await json.loads(request.json())
-            update = json.loads(reply)
-            # Save state information if response is from primary
-            if update["N_replica"] == self.primary:
-                #TODO update state of replica
-                pass
-                self.log = update["Log"]
-                self.n_commit = update["N_Commit"]
-                self.n_operation = update["N_Operation"]
-                self.n_view = update["N_View"]
-            i += 1
-		
-        #Update state from responses once majority is received
-        self.current_state = State.NORMAL
 
-		# WORKING ON ABOVE
+    async def recovery_response(self, request):
+        if self.current_state == State.RECOVERING:
+            body = await request.json()
+            txt = json.loads(body)
+            if txt["Nonce"] == self.recovery_nonce:
+                self.n_recovery_messages +=1
+                if request.remote == self.primary:
+                    # save state info
+                    self.log = txt["Log"]###we will need to sort this log bit out
+                    self.n_commit = txt["N_Commit"]
+                    self.n_operation = txt["N_Operation"]
+                    self.n_view = txt["N_View"]
+                    self.primary_recovery_response = True
+                if self.n_recovery_messages >= int(len(self.other_replicas)/2) and self.primary_recovery_response:
+                    self.n_recovery_messages = 0
+                    self.primary_recovery_response = False
+                    self.current_state = State.NORMAL
+                    self.timer.start()
+        return web.Response()
+
 
     async def start_view_change(self, request):
         self.current_state = State.VIEW_CHANGE
@@ -157,9 +156,11 @@ class replica:
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(10, self.send_view_change)
+            self.timer.start()
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit)
+            self.timer.start()
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -247,35 +248,53 @@ class replica:
     async def start_view(self, request):
         #recieve the new view message to begin the next view
         #TODO: implement
+        body = await request.json()
+        txt = json.loads(body)
+        self.n_view = txt['N_View']
+        self.Log = txt['Log']
+        self.n_operation = txt['N_Operation']
+        self.n_commit = txt['N_Commit']
+        self.primary = request.remote
+        self.current_state = State.NORMAL
         return web.Request()
         
 
     async def get_state(self, request):
-        msg = json.dumps({"Type": "NewState","N_View":self.n_view,"Log":self.log[-1],"N_Operation":self.n_operation,"N_Commit":self.n_commit})
+        msg = json.dumps({
+            "Type": "NewState",
+            "N_View":self.n_view,
+            "Log":self.log[-1],
+            "N_Operation":self.n_operation,
+            "N_Commit":self.n_commit})
         return web.Response(body = msg)
 
     async def recovery_help(self, request):
         #send back the recover message
+        body = await request.json()
+        txt = json.loads(body)
         if self.primary == self.local_ip:
             #return the intense answer
-            body = request.json()
-            txt = json.loads(body)
-            nonce = txt['Nonce']
             reply = json.dumps({
                 "Type": "RecoverResponse",
                 "N_View": self.n_view,
-                "Nonce": nonce,
+                "Nonce": txt['Nonce'],
                 "Log": self.log,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit
             })
-            return web.Response(body = reply)
+            self.send_message(request.remote, "post", "RecoverResponse", reply)
+            return web.Response()
         else:
             #return the small answer
-            body = await request.json()
-            text = json.loads(body)
-            msg = json.dumps({"Type": "RecoveryResponse","N_View":self.n_view,"Nonce":text['Nonce'],"Log":"Nil","N_Operation":"Nil","N_Commit":"Nil"})
-            return web.Response(body = msg)
+            msg = json.dumps({
+                "Type": "RecoveryResponse",
+                "N_View":self.n_view,
+                "Nonce":txt['Nonce'],
+                "Log":"Nil",
+                "N_Operation":"Nil",
+                "N_Commit":"Nil"})
+            self.send_message(request.remote, "post", "RecoverResponse", msg)
+            return web.Response()
          
         
 
@@ -322,6 +341,7 @@ class replica:
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
                             web.post('/Recover', self.recovery_help),
+                            web.post('RecoveryResponse', self.recovery_response),
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
                             web.get('/GetReplicaList', self.replica_list),

@@ -1,13 +1,17 @@
 #The place where all the replicas logic will be saved.
 from VR_replica import replica
 import asyncio
+import sys
 
 #TODO: Add function to check where a player will endup given the gamestate and intended movemnts of all players
 #TODO: Add function for logic in player movement
 
 
 def main():
-    rep = replica.replica("192.168.0.10")
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <routing ip-address>")
+    else:
+        rep = replica.replica("192.168.0.10")
     
 
 
