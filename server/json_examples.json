@@ -139,7 +139,7 @@
             "Type": "GetState",
             "N_View":0,
             "N_Operation":16,
-            "N_replica":2
+            "N_Replica":2
         },
         //response to /GetState is NewState
         {

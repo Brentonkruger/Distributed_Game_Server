@@ -137,11 +137,8 @@ class replica:
         self.timer.start()
 
     async def replica_broadcast(self, req_type, req_location, msg):
-        a_status = 200
         for rep in self.other_replicas:
-            resp = await self.send_message(str(rep),req_type, req_location, msg)
-            if resp.status != 200:
-                a_status = resp.status
+            await self.send_message(str(rep),req_type, req_location, msg)
         return a_status
 
     async def request_primary_ip(self):
