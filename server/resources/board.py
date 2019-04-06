@@ -128,31 +128,69 @@ class Board:
             return False
 
     def calculate_player_finished_positions(self):
+        power_dict = {}
+        # print(self.player_list.values())
+        for player in self.player_list.values():
+            current_list = []
+            if player.power in power_dict:
+                current_list = power_dict[player.power]
+            power_dict.setdefault(player.power, []).append(player)
 
-        sorted_player_list_by_power = sorted(self.player_list.values(), key=lambda player: player.power, reverse=True)
-        # From highest to lowest in power amount
-        for player in sorted_player_list_by_power:
-            intended_location = (player.current_location[0], player.current_location[1])
-            # If we wanted to do multiple moves a turn, we would have a for loop for each movement here
-            if (player.intended_movement() == ["U"]) and (player.current_location[0] > 0):
-                intended_location = (intended_location[0] - 1, intended_location[1])
+        ordered_p_d = sorted(power_dict.keys())
+        for power_lvl in ordered_p_d:
+            intended_moves = {}
+            for player in power_dict[power_lvl]:
+                move = self.find_intended_location(player)
+                intended_moves.setdefault(move, []).append(player)
+            
+            
+            final_moves = self.collision_check(intended_moves)
+            for move, player in final_moves.items():
+                # TODO: If the move is going onto another player, push or squish
+                player.current_location = move
 
-            if (player.intended_movement() == ["D"]) and (player.current_location[0] < len(self.board[0]) - 1):
-                intended_location = (intended_location[0] + 1, intended_location[1])
 
-            if (player.intended_movement() == ["L"]) and (player.current_location[1] > 0):
-                intended_location = (intended_location[0], intended_location[1] - 1)
+                # BELOW IS THE CODE TO JUST GET THE PLAYERS MOVING WITH NO COLLISION DETECTION.
+                #>>>> player.current_location = self.find_intended_location(player) <<<<<
 
-            if (player.intended_movement() == ["R"]) and (player.current_location[1] < len(self.board[0]) - 1):
-                intended_location = (intended_location[0], intended_location[1] + 1)
+                
 
-            if player.intended_movement() == ["N"]:
-                intended_location = (intended_location[0], intended_location[1])
+            # Now that we have the list of where everyone would like to be, we resolve collisions.
 
             #TODO: Check for collisions or something based on these intended locations, rather than assign them
-            player.current_location = intended_location
-            
-            
-            
-
         
+    # Finds the space the given player would like to move. This function also safeguards to player from moving off the map.
+    def find_intended_location(self, player):
+        intended_location = (player.current_location[0], player.current_location[1])
+
+        if (player.intended_movement() == ["U"]) and (player.current_location[0] > 0):
+            intended_location = (intended_location[0] - 1, intended_location[1])
+
+        if (player.intended_movement() == ["D"]) and (player.current_location[0] < len(self.board[0]) - 1):
+            intended_location = (intended_location[0] + 1, intended_location[1])
+
+        if (player.intended_movement() == ["L"]) and (player.current_location[1] > 0):
+            intended_location = (intended_location[0], intended_location[1] - 1)
+
+        if (player.intended_movement() == ["R"]) and (player.current_location[1] < len(self.board[0]) - 1):
+            intended_location = (intended_location[0], intended_location[1] + 1)
+
+        if player.intended_movement() == ["N"]:
+            intended_location = (intended_location[0], intended_location[1])
+
+        return intended_location
+
+    # Takes in a tuple of players and their intended locations, then checks for conflicts
+    def collision_check(self, intended_moves):
+        for location, player_list in intended_moves.items():
+            if len(player_list) > 1:
+                #Resolve the conflict
+                for player in player_list:
+                    intended_moves.setdefault(player.current_location, []).append(player)
+                del intended_moves[location]
+                intended_moves = self.collision_check(intended_moves)
+                break
+            else:
+                intended_moves[location] = player_list[0]
+        return intended_moves
+    
