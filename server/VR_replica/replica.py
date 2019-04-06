@@ -237,7 +237,10 @@ class replica:
         #recieve the commit message, and apply if necessary.
         self.timer.cancel()
         msg = await request.json()
-        text = json.loads(msg)
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
         if text["N_View"] > self.n_view:
             await self.start_recovery()
         if text["N_Commit"] > self.n_commit:
@@ -263,16 +266,17 @@ class replica:
     
     async def start_state_transfer(self):
         #send state transfer
-        msg = json.dumps({
+        msg = {
             "Type": "GetState",
             "N_View":self.n_view,
             "N_Operation":self.n_operation,
             "N_Replica":self.local_ip
-        })
+        }
         # self.send_message(self.other_replicas[random.randint(0,len(self.other_replicas))], "get", "GetState", msg)
         tmp_list = self.other_replicas
+        # print([i for i in tmp_list])
         print(random.sample(tmp_list,1))
-        self.send_message(random.sample(tmp_list, 1), "get", "GetState", msg)
+        await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
 
 
     async def get_state(self, request):
