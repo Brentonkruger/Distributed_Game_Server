@@ -106,7 +106,6 @@ class TestingBoard(unittest.TestCase):
 
         # Set two blocks to cracked, then run transition function
         self.brd.change_block(1,1)
-
         self.brd.add_powerup(1,1)
         self.assertTrue(self.brd.check_block(1,1).has_powerup)
         self.brd.transition_blocks()
@@ -149,11 +148,117 @@ class TestingBoard(unittest.TestCase):
         self.brd.randomly_generate_powerups(3)
         self.assertEqual(len(self.brd.powerup_locations), 1)
     
-    def test_gamestate_move_players(self):
+    def test_gamestate_move_players_up(self):
+        self.brd = board.Board(5)
+        self.brd.assign_player_with_location(0, 4, 4)
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (3,4))
+
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (2,4))
+
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,4))
+
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,4))
+
+        self.brd.set_player_movement_direction(0, ["U"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["U"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,4))
+
+    def test_gamestate_move_players_down(self):
+        self.brd = board.Board(5)
+        self.brd.assign_player_with_location(0, 0, 4)
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["D"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,4))
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["D"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (2,4))
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["D"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (3,4))
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["D"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (4,4))
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["D"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (4,4))
+
+    def test_gamestate_move_players_right(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 0, 0)
+
+        self.brd.set_player_movement_direction(0, ["R"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["R"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,1))
+
+        self.brd.set_player_movement_direction(0, ["R"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["R"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+
+        self.brd.set_player_movement_direction(0, ["R"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["R"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+
+    def test_gamestate_move_players_left(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 0, 2)
+
+        self.brd.set_player_movement_direction(0, ["L"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["L"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,1))
+
+        self.brd.set_player_movement_direction(0, ["L"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["L"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,0))
+
+        self.brd.set_player_movement_direction(0, ["L"])
+        self.assertEqual(self.brd.get_player_by_id(0).intended_movement(),["L"]) 
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,0))
+        
+    def test_gamestate_move_with_collisions_of_same_power(self):
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 0, 2)
+        self.brd.assign_player_with_location(1, 2, 2)
+        self.brd.assign_player_with_location(2, 1, 1)
+
+        self.brd.set_player_movement_direction(0, ["D"])
+        self.brd.set_player_movement_direction(1, ["U"])
+        self.brd.set_player_movement_direction(2, ["R"])
+        self.brd.calculate_player_finished_positions()
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (0,2))
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (2,2))
+        self.assertEqual(self.brd.get_player_by_id(2).current_location, (1,1))
+
+    def test_player_powerup_pickup(self):
         return False
 
-    def test_gamestate_complete_turn(self):
-        return False
 
 if __name__ == '__main__':
     unittest.main()
