@@ -69,7 +69,7 @@ class replica:
                 response = await reply.text()
                 update = json.loads(response)
                 # Save state information if response is from primary
-                if update["N_replica"] == self.request_primary_ip():
+                if update["N_replica"] == self.primary:
 		            #TODO update state of replica
                     pass
                 i += 1
