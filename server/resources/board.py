@@ -26,6 +26,7 @@ class Block():
 class Board:    
     #Create a blank board, with a specified size (the width and height of the square board)
     def __init__(self, size):
+        self.turn = 0
         self.stable_locations = set()
         self.cracked_locations = set()
         self.hole_locations = set()
@@ -140,7 +141,6 @@ class Board:
     def calculate_player_finished_positions(self):
         power_dict = {}
         location_dict = {}
-        # print(self.player_list.values())
         for player in self.player_list.values():
             current_list = []
             if player.power in power_dict:
@@ -220,19 +220,19 @@ class Board:
     def find_intended_location(self, player):
         intended_location = (player.current_location[0], player.current_location[1])
 
-        if (player.intended_movement() == ["U"]) and (player.current_location[0] > 0):
+        if (player.movement == ["U"]) and (player.current_location[0] > 0):
             intended_location = (intended_location[0] - 1, intended_location[1])
 
-        if (player.intended_movement() == ["D"]) and (player.current_location[0] < len(self.board[0]) - 1):
+        if (player.movement == ["D"]) and (player.current_location[0] < len(self.board[0]) - 1):
             intended_location = (intended_location[0] + 1, intended_location[1])
 
-        if (player.intended_movement() == ["L"]) and (player.current_location[1] > 0):
+        if (player.movement == ["L"]) and (player.current_location[1] > 0):
             intended_location = (intended_location[0], intended_location[1] - 1)
 
-        if (player.intended_movement() == ["R"]) and (player.current_location[1] < len(self.board[0]) - 1):
+        if (player.movement == ["R"]) and (player.current_location[1] < len(self.board[0]) - 1):
             intended_location = (intended_location[0], intended_location[1] + 1)
 
-        if player.intended_movement() == ["N"]:
+        if player.movement == ["N"]:
             intended_location = (intended_location[0], intended_location[1])
 
         return intended_location
@@ -264,12 +264,14 @@ class Board:
         self.randomly_generate_powerups(int(len(self.board[0]) / 5) + 1)
         self.randomly_generate_cracked_location(int(len(self.board[0]) / 3) + 1)
 
-        self.get_full_gamestate()
+        self.turn += 1
+
+        return self.get_full_gamestate()
         
         
     def get_full_gamestate(self):
         returned_json = {}
-
+        returned_json["turn"] = self.turn
         powerup_json = []
         for powerup_location in self.powerup_locations:
             powerup_json.append(self.coord_converter(powerup_location[0], powerup_location[1]))
@@ -297,14 +299,16 @@ class Board:
             player_quals["id"] = player.id
             player_quals["current_location"] = player.current_location
             player_quals["power"] = player.power
+            player_quals["intended_move"] = player.movement
             if player.dead:
                 player_quals["dead"] = "true"
                 del self.player_list[player.id]
             else:
                 player_quals["dead"] = "false"
-            
-                
+                self.player_list[player.id].intended_movement = ["S"]
             player_json.append(player_quals)
+            
+
         returned_json["player_list"] = player_json
 
         return(returned_json)
