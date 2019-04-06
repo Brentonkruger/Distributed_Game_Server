@@ -98,15 +98,17 @@ class replica:
 		# Waiting until enough responses received
         i = 0
         while i < (len(self.other_replicas) / 2) + 1:
-            for rep in self.other_replicas:
-                reply = await self.send_message(str(rep), "get", "RecoverResponse", None)
-                response = await reply.text()
-                update = json.loads(response)
-                # Save state information if response is from primary
-                if update["N_replica"] == self.primary:
-		            #TODO update state of replica
-                    pass
-                i += 1
+            reply = await json.loads(request.json())
+            update = json.loads(reply)
+            # Save state information if response is from primary
+            if update["N_replica"] == self.primary:
+                #TODO update state of replica
+                pass
+                self.log = update["Log"]
+                self.n_commit = update["N_Commit"]
+                self.n_operation = update["N_Operation"]
+                self.n_view = update["N_View"]
+            i += 1
 		
         #Update state from responses once majority is received
         self.current_state = State.NORMAL
