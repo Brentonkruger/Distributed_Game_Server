@@ -158,7 +158,7 @@ class replica:
 
         # Response
         # If replica is the primary, send everything
-        if self.current_mode == Mode.PRIMARY:
+        if self.primary == self.local_ip:
             reply = {
                 "Type": "RecoverResponse",
                 #"N_View": /* View Number */,
