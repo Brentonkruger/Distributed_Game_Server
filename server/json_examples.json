@@ -105,7 +105,10 @@
         // send to GET /GetReplicaList
         {
             "Type": "GetReplicaList",
-            "IP": "192.0.2.0"
+            "IP": "192.0.2.0",
+            "N_Commit": 0,
+            "N_Operation":0,
+            "N_View":0
         },
 
         //response from /ComputeGameState is GameState

@@ -146,6 +146,7 @@ class replica:
             await self.send_message(str(rep),req_type, req_location, msg)
 
     async def request_primary_ip(self):
+        # start up the game, and get the current state of the game. Run recovery if necessary.
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
@@ -156,7 +157,13 @@ class replica:
 
             #connect to primary and ask for updated replica list
             msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
-            await self.send_message(self.primary, "get", "GetReplicaList", msg)
+            resp = await self.send_message(self.primary, "get", "GetReplicaList", msg)
+            txt = json.loads(await resp.text())
+
+            #TODO:check response for current state, start recovery if behind.
+            if txt['N_Commit']> self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View']> self.n_view:
+                #Start recovery!!
+                self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(10, self.send_view_change, self.loop)
