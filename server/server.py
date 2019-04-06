@@ -1,5 +1,5 @@
 #The place where all the replicas logic will be saved.
-from VR_replica import replica
+from resources import replica
 import asyncio
 import sys
 
