@@ -1,7 +1,7 @@
 #The logic for all gamestate code
 
 from enum import Enum
-import random
+import random, json
 from . import player
 
 class BlockState(Enum):
@@ -36,7 +36,6 @@ class Board:
                 self.stable_locations.add((i,j))
         self.board = [[Block() for x in range(size)] for y in range(size)]
         
-
     def print_board(self):
         string = ""
         for i in range(len(self.board)):
@@ -93,6 +92,17 @@ class Board:
                 if len(avalible_locations) > 0:
                     chosen_tile = (random.sample(avalible_locations, 1))
                     self.add_powerup(chosen_tile[0][0], chosen_tile[0][1])
+
+    def randomly_generate_cracked_location(self, quantity):
+        # We cannot generate more powerups than there are stable locations
+        if quantity > len(self.stable_locations):
+            quantity = len(self.stable_locations)
+        if quantity > 0:
+            for cracked_location in range(quantity): 
+                avalible_locations = self.stable_locations.copy()
+                if len(avalible_locations) > 0:
+                    chosen_tile = (random.sample(avalible_locations, 1))
+                    self.change_block(chosen_tile[0][0], chosen_tile[0][1])
             
     def assign_players(self, number_of_players):
         for value in range(number_of_players):
@@ -129,14 +139,18 @@ class Board:
 
     def calculate_player_finished_positions(self):
         power_dict = {}
+        location_dict = {}
         # print(self.player_list.values())
         for player in self.player_list.values():
             current_list = []
             if player.power in power_dict:
                 current_list = power_dict[player.power]
             power_dict.setdefault(player.power, []).append(player)
+            location_dict[player.current_location] = player
+
 
         ordered_p_d = sorted(power_dict.keys())
+
         for power_lvl in ordered_p_d:
             intended_moves = {}
             for player in power_dict[power_lvl]:
@@ -145,20 +159,63 @@ class Board:
             
             
             final_moves = self.collision_check(intended_moves)
+            
             for move, player in final_moves.items():
-                # TODO: If the move is going onto another player, push or squish
+                if move in location_dict:
+                    # If it is a different player that is in the way, push or dont move!
+                    if not player == location_dict[move]:
+                        # Power comparison
+                        if player > location_dict[move]:
+                            location_dict[move].current_location = self.push(location_dict[move], player.intended_movement(), location_dict)
+                            del location_dict[move]
+                        elif player < location_dict[move]:
+                            move = player.current_location
+                
                 player.current_location = move
+                location_dict[player.current_location] = player
 
 
-                # BELOW IS THE CODE TO JUST GET THE PLAYERS MOVING WITH NO COLLISION DETECTION.
-                #>>>> player.current_location = self.find_intended_location(player) <<<<<
+    # Move a player into another space from another force. 
+    # If there is anything blocking the way, the player is dead.
+    def push(self, player, direction, current_locations_of_players):
+        intended_location = (player.current_location[0], player.current_location[1])
 
+        if direction == ["U"]: 
+            #TODO: if the player is being pushed into the wall, or into another player, kill that boi
+            if player.current_location[0] == 0:
+                player.dead = True
+                intended_location = (-1, -1)
+            else:
+                intended_location = (intended_location[0] - 1, intended_location[1])
+
+        if direction == ["D"]:
+            if player.current_location[0] == len(self.board[0]) - 1:
+                player.dead = True
+                intended_location = (-1, -1)
+            else:
+                intended_location = (intended_location[0] + 1, intended_location[1])
+
+        if direction == ["L"]:
+            if player.current_location[1] == 0:
+                player.dead = True
+                intended_location = (-1, -1)
+            else:
+                intended_location = (intended_location[0], intended_location[1] - 1)
+
+        if direction == ["R"]:
+            if player.current_location[1] == len(self.board[0]) - 1: 
+                player.dead = True
+                intended_location = (-1, -1)
+            else:
+                intended_location = (intended_location[0], intended_location[1] + 1)
+        
+        if intended_location in current_locations_of_players:
+            player.dead = True
+            intended_location = (-1, -1)
+
+        return intended_location
                 
 
-            # Now that we have the list of where everyone would like to be, we resolve collisions.
-
-            #TODO: Check for collisions or something based on these intended locations, rather than assign them
-        
     # Finds the space the given player would like to move. This function also safeguards to player from moving off the map.
     def find_intended_location(self, player):
         intended_location = (player.current_location[0], player.current_location[1])
@@ -193,4 +250,39 @@ class Board:
             else:
                 intended_moves[location] = player_list[0]
         return intended_moves
-    
+
+
+    def complete_turn(self):
+        self.transition_blocks()
+        self.calculate_player_finished_positions()
+        for player in self.player_list.values():
+            if player.current_location in self.hole_locations:
+                player.dead = True
+            if player.current_location in self.powerup_locations:
+                player.add_power(1)
+                self.remove_powerup(player.current_location[0], player.current_location[1])
+        self.randomly_generate_powerups(int(len(self.board[0]) / 5) + 1)
+        self.randomly_generate_cracked_location(int(len(self.board[0]) / 3) + 1)
+
+        returned_json = {}
+        returned_json["powerup_locations"] = self.powerup_locations
+        returned_json["cracked_locations"] = self.cracked_locations
+        returned_json["stable_locations"] = self.stable_locations
+        returned_json["hole_locations"] = self.hole_locations
+        player_json = []
+        player_list_copy = self.player_list.copy()
+        for player in player_list_copy.values():
+            player_quals = {}
+            player_quals["id"] = player.id
+            player_quals["current_location"] = player.current_location
+            player_quals["power"] = player.power
+            if player.dead:
+                player_quals["dead"] = player.dead
+                del self.player_list[player.id]
+            
+                
+            player_json.append(player_quals)
+
+
+        return(player_json)
+        
