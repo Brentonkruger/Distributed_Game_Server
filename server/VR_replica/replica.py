@@ -139,7 +139,6 @@ class replica:
     async def replica_broadcast(self, req_type, req_location, msg):
         for rep in self.other_replicas:
             await self.send_message(str(rep),req_type, req_location, msg)
-        return a_status
 
     async def request_primary_ip(self):
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
