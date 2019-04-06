@@ -7,6 +7,7 @@ import json
 from aiohttp import web
 import aiohttp
 import random
+import board
 
 class Mode(Enum):
     BACKUP = 0
