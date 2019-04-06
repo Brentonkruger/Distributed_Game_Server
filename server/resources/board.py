@@ -294,7 +294,7 @@ class Board:
             player_quals["current_location"] = player.current_location
             player_quals["power"] = player.power
             if player.dead:
-                player_quals["dead"] = player.dead
+                player_quals["dead"] = "true"
                 del self.player_list[player.id]
             
                 
