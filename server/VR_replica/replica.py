@@ -6,6 +6,7 @@ import secrets
 import json
 from aiohttp import web
 import aiohttp
+import random
 
 class Mode(Enum):
     BACKUP = 0
@@ -35,7 +36,7 @@ class Timer:
             self.callback = callback
         if timeout is not None:
             self.timeout = timeout
-            self._task = asyncio.ensure_future(self._job(), loop=self._loop)
+        self._task = asyncio.ensure_future(self._job(), loop=self._loop)
 
     def restart(self):
         self._task.cancel()
@@ -75,6 +76,8 @@ class replica:
 
         try:
             self.loop.run_forever()
+        except ConnectionError:
+            pass
         except:
             self.loop.close()
         
@@ -82,11 +85,8 @@ class replica:
     async def start_recovery(self):
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
-        try:
-            self.timer.cancel()
-        except:
-            pass
-
+        
+        self.timer.cancel()
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
         message = json.dumps({
@@ -131,8 +131,7 @@ class replica:
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
-        self.timer.cancel()
-        print("sending commit")
+        # print("sending commit")
         msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
         resp = await self.replica_broadcast("post", "Commit", msg)
         self.timer.start()
@@ -180,7 +179,7 @@ class replica:
         if self.local_ip == self.primary:
             msg = await request.json()
             # add fields needed for the replicas (commit number op number etc.)
-            resp = await self.replica_broadcast("post", "PlayerMovement", msg)
+            await self.replica_broadcast("post", "PlayerMovement", msg)
             #TODO:apply update
             
             #update commit number
@@ -193,6 +192,11 @@ class replica:
             #update operation number
             #update commit number
             return web.Response()
+    
+    async def player_move_ok(self, request):
+        #TODO: implement
+        pass
+
 
     async def client_join(self, request):
         #client has joined up
@@ -207,6 +211,10 @@ class replica:
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
+        #TODO: implement
+        pass
+    
+    async def receive_gamestate(self, request):
         #TODO: implement
         pass
 
@@ -232,19 +240,14 @@ class replica:
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
         self.timer.cancel()
-        msg = await request.json()
-        text = json.loads(msg)
+        text = await request.json()
+        # text = json.loads(msg)
         if text["N_View"] > self.n_view:
-            #go into recovery mode
-            # TODO: implement
-            pass
-        elif text["n_commit"] > self.n_commit:
-            #go into state transfer mode
-            # TODO: implement
-            pass
-        else:
-            
-            return web.Response()
+            await self.start_recovery()
+        if text["N_Commit"] > self.n_commit:
+            await self.start_state_transfer()
+        
+        return web.Response()
             
         self.timer.start()
         #don't update client about this one.
@@ -261,9 +264,26 @@ class replica:
         self.primary = request.remote
         self.current_state = State.NORMAL
         return web.Request()
-        
+    
+    async def start_state_transfer(self):
+        #send state transfer
+        msg = json.dumps({
+            "Type": "GetState",
+            "N_View":self.n_view,
+            "N_Operation":self.n_operation,
+            "N_Replica":self.local_ip
+        })
+        # self.send_message(self.other_replicas[random.randint(0,len(self.other_replicas))], "get", "GetState", msg)
+        tmp_list = self.other_replicas
+        print(random.sample(tmp_list,1))
+        self.send_message(random.sample(tmp_list, 1), "get", "GetState", msg)
+
 
     async def get_state(self, request):
+
+        #TODO: set op number to commit number, clear logs before that
+        self.n_operation = self.n_commit
+        self.log = self.log[:self.n_operation+1]
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
@@ -348,9 +368,11 @@ class replica:
                             web.post('/RecoveryResponse', self.recovery_response),
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
+                            web.post('/PlayerMoveOK', self.player_move_ok),
                             web.get('/GetReplicaList', self.replica_list),
                             web.post('/UpdateReplicaList', self.update_replicas),
-                            web.get('/ComputeGamestate', self.compute_gamestate)])
+                            web.get('/ComputeGamestate', self.compute_gamestate),
+                            web.get('/Gamestate', self.receive_gamestate)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.local_ip, 9999)

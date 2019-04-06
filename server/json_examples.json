@@ -82,7 +82,7 @@
             "N_Commit": 15
         },
 
-        // response to /GetReplicaList is /UpdateReplicaList
+        // send to POST /UpdateReplicaList as update for GetReplicaList
         {
             "Type": "UpdateReplicaList",
             "Replica_List": [
