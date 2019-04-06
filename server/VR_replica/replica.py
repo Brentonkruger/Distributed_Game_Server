@@ -49,6 +49,7 @@ class replica:
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
+        self.client_list = []
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
@@ -56,6 +57,7 @@ class replica:
         self.n_operation = 0
         self.n_recovery_messages = 0
         self.primary_recovery_response = False
+        self.game_running = False
         #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
         self.log = []
 
@@ -118,6 +120,8 @@ class replica:
 
 
     async def start_view_change(self, request):
+        #recieves this message from other nodes to start the process.
+        #return the 
         self.current_state = State.VIEW_CHANGE
         #TODO: run the view change protocol
         self.current_state = State.NORMAL
@@ -171,15 +175,25 @@ class replica:
 
     async def player_move(self, request):
         #check if the move has already been made (op number)
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            msg = await request.json()
-            # add fields needed for the replicas (commit number op number etc.)
-            await self.replica_broadcast("post", "PlayerMovement", msg)
-            #TODO:apply update
-            
-            #update commit number
-            return web.Response()
+            if len(self.log) >= text['N_Operation']:
+                #TODO:resend the operation with the GameUpdate package
+                pass
+            else:
+                # add fields needed for the replicas (commit number op number etc.)
+                await self.replica_broadcast("post", "PlayerMovement", msg)
+                #TODO:apply update
+                
+                #update commit number
+                return web.Response()
+        
 
 
         #backups recieve the player move and adds it to the gamestate, then replies when it's finished
@@ -196,10 +210,33 @@ class replica:
 
     async def client_join(self, request):
         #client has joined up
+        #check for a running game
+        if not self.game_running:
+            if request.remote not in self.client_list:
+                self.client_list.append(request.remote)
+            self.client_list.sort()
+            if self.local_ip == self.primary:
+                msg = await request.json()
+                if type(msg) == dict:
+                    text = msg
+                else:
+                    text = json.loads(msg)
+                resp = json.dumps({
+                    "Type": "ClientJoinOK",
+                    "Client_ID": request.remote,
+                    "N_Request": text['N_Request']})
+                return web.Response(body = resp)
+            else:
+                return web.Response()
+        else:
+            return web.Response(status = 400)
+
+    async def readied_up(self, request):
+        #add the user's ready state
         #TODO: implement
         pass
 
-    async def start_game(self, request):
+    async def start_game(self):
         #finalize the servers on game start
         #send the message to the clients to begin the game
         #TODO: implement
@@ -228,10 +265,7 @@ class replica:
         #TODO: implement
         pass
 
-    async def readied_up(self, request):
-        #add the user's ready state
-        #TODO: implement
-        pass
+    
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
