@@ -322,7 +322,32 @@ class TestingBoard(unittest.TestCase):
         self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
 
     def test_player_powerup_pickup(self):
-        return False
+        self.brd = board.Board(3)
+        self.brd.assign_player_with_location(0, 1, 2)
+        self.brd.assign_player_with_location(1, 2, 2)
+
+        self.brd.set_player_movement_direction(0, ["L"])
+        self.brd.set_player_movement_direction(1, ["U"])
+
+        # Make a hole where player with id 1 is going.
+        self.brd.change_block(1,2)
+
+        # Make a powerup where player with id 0 is going.
+        self.brd.add_powerup(1,1)
+        self.brd.complete_turn()
+
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,1))
+        self.assertEqual(self.brd.get_player_by_id(0).power, 1)
+
+        # 1 because one was picked up, and one was spawned.
+        self.assertEqual(len(self.brd.powerup_locations), 1)
+
+        self.assertEqual(self.brd.get_player_by_id(1).current_location, (1,2))
+        self.assertTrue(self.brd.get_player_by_id(1).dead)
+        
+
+
+        self.brd.complete_turn()
 
 
 if __name__ == '__main__':

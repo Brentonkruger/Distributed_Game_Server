@@ -36,7 +36,6 @@ class Board:
                 self.stable_locations.add((i,j))
         self.board = [[Block() for x in range(size)] for y in range(size)]
         
-
     def print_board(self):
         string = ""
         for i in range(len(self.board)):
@@ -158,7 +157,7 @@ class Board:
                         if player > location_dict[move]:
                             location_dict[move].current_location = self.push(location_dict[move], player.intended_movement(), location_dict)
                             del location_dict[move]
-                        else:
+                        elif player < location_dict[move]:
                             move = player.current_location
                 
                 player.current_location = move
@@ -240,4 +239,18 @@ class Board:
             else:
                 intended_moves[location] = player_list[0]
         return intended_moves
+
+
+    def complete_turn(self):
+        self.transition_blocks()
+        self.calculate_player_finished_positions()
+        for player in self.player_list.values():
+            if player.current_location in self.hole_locations:
+                print("you have died sir.")
+                player.dead = True
+            if player.current_location in self.powerup_locations:
+                player.add_power(1)
+                self.remove_powerup(player.current_location[0], player.current_location[1])
+        self.randomly_generate_powerups(int(len(self.board[0]) / 5) + 1)
+        
     
