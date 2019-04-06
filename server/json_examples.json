@@ -54,7 +54,17 @@
         //send to POST /GameUpdate
         {
             "Type": "GameUpdate",
-            "Gamestate": "Gamestate stuff"
+            "Gamestate": {
+                "powerup_locations": [
+                    {"x": 1, "y": 0}
+                ], 
+                "cracked_locations": {(0, 1), (2, 2)}, 
+                "stable_locations": {(0, 0), (2, 1), (2, 0), (1, 1), (1, 0), (0, 2)}, 
+                "hole_locations": {(1, 2)}, 
+                "player_list": [
+                    {'id': 0, 'current_location': (1, 1), 'power': 1}, 
+                    {'id': 1, 'current_location': (1, 2), 'power': 0, 'dead':True}]
+                }
         },
         //send to POST /GameStart
         {

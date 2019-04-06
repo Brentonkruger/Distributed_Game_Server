@@ -265,10 +265,27 @@ class Board:
         self.randomly_generate_cracked_location(int(len(self.board[0]) / 3) + 1)
 
         returned_json = {}
-        returned_json["powerup_locations"] = self.powerup_locations
-        returned_json["cracked_locations"] = self.cracked_locations
-        returned_json["stable_locations"] = self.stable_locations
-        returned_json["hole_locations"] = self.hole_locations
+
+        powerup_json = []
+        for powerup_location in self.powerup_locations:
+            powerup_json.append(self.coord_converter(powerup_location[0], powerup_location[1]))
+        returned_json["powerup_locations"] = powerup_json
+
+        cracked_json = []
+        for cracked_location in self.cracked_locations:
+            cracked_json.append(self.coord_converter(cracked_location[0], cracked_location[1]))
+        returned_json["cracked_locations"] = cracked_json
+
+        stable_json = []
+        for stable_location in self.stable_locations:
+            stable_json.append(self.coord_converter(stable_location[0], stable_location[1]))
+        returned_json["stable_locations"] = stable_json
+
+        hole_json = []
+        for hole_location in self.hole_locations:
+            hole_json.append(self.coord_converter(hole_location[0], hole_location[1]))
+        returned_json["hole_locations"] = hole_json
+
         player_json = []
         player_list_copy = self.player_list.copy()
         for player in player_list_copy.values():
@@ -277,12 +294,18 @@ class Board:
             player_quals["current_location"] = player.current_location
             player_quals["power"] = player.power
             if player.dead:
-                player_quals["dead"] = player.dead
+                player_quals["dead"] = "true"
                 del self.player_list[player.id]
             
                 
             player_json.append(player_quals)
+        returned_json["player_list"] = player_json
 
-
-        return(player_json)
+        return(returned_json)
         
+
+    def coord_converter(self, x, y):
+        new_coord = {}
+        new_coord["x"] = y
+        new_coord["y"] = len(self.board[0]) - (x + 1) 
+        return new_coord
