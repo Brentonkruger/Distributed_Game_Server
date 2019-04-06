@@ -264,6 +264,10 @@ class Board:
         self.randomly_generate_powerups(int(len(self.board[0]) / 5) + 1)
         self.randomly_generate_cracked_location(int(len(self.board[0]) / 3) + 1)
 
+        self.get_full_gamestate()
+        
+        
+    def get_full_gamestate(self):
         returned_json = {}
 
         powerup_json = []
@@ -296,13 +300,14 @@ class Board:
             if player.dead:
                 player_quals["dead"] = "true"
                 del self.player_list[player.id]
+            else:
+                player_quals["dead"] = "false"
             
                 
             player_json.append(player_quals)
         returned_json["player_list"] = player_json
 
         return(returned_json)
-        
 
     def coord_converter(self, x, y):
         new_coord = {}
