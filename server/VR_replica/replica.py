@@ -17,9 +17,10 @@ class State(Enum):
     RECOVERING = 2
     
 class Timer:
-    def __init__(self, timeout, callback):
+    def __init__(self, timeout, callback, loop):
         self._timeout = timeout
         self._callback = callback
+        self._loop = loop
         # self._task = asyncio.ensure_future(self._job())
 
     async def _job(self):
@@ -34,12 +35,11 @@ class Timer:
             self.callback = callback
         if timeout is not None:
             self.timeout = timeout
-        self._task = asyncio.ensure_future(self._job())
+            self._task = asyncio.ensure_future(self._job(), loop=self._loop)
 
-    
     def restart(self):
         self._task.cancel()
-        self.task = asyncio.ensure_future(self._job())
+        self._task = asyncio.ensure_future(self._job(), loop=self._loop)
 
 class replica:
     
@@ -82,7 +82,10 @@ class replica:
     async def start_recovery(self):
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
-        self.timer.cancel()
+        try:
+            self.timer.cancel()
+        except:
+            pass
 
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
@@ -129,6 +132,7 @@ class replica:
     async def send_commit(self):
         #send out the commit message as a heartbeat
         self.timer.cancel()
+        print("sending commit")
         msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
         resp = await self.replica_broadcast("post", "Commit", msg)
         self.timer.start()
@@ -155,12 +159,12 @@ class replica:
             await self.send_message(self.primary, "get", "GetReplicaList", msg)
 
             #start the heartbeat expectiation from the primary.
-            self.timer = Timer(10, self.send_view_change)
-            self.timer.start()
+            self.timer = Timer(10, self.send_view_change, self.loop)
+            self.timer.start(10, self.send_view_change)
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
-            self.timer = Timer(7, self.send_commit)
-            self.timer.start()
+            self.timer = Timer(7, self.send_commit, self.loop)
+            self.timer.start(7, self.send_commit)
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -341,7 +345,7 @@ class replica:
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
                             web.post('/Recover', self.recovery_help),
-                            web.post('RecoveryResponse', self.recovery_response),
+                            web.post('/RecoveryResponse', self.recovery_response),
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
                             web.get('/GetReplicaList', self.replica_list),

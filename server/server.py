@@ -11,7 +11,7 @@ def main():
     if len(sys.argv) != 2:
         print("Usage: python server.py <routing ip-address>")
     else:
-        rep = replica.replica("192.168.0.10")
+        rep = replica.replica(sys.argv[1])
     
 
 
