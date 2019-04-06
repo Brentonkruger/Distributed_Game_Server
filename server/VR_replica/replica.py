@@ -113,14 +113,11 @@ class replica:
 
 		# WORKING ON ABOVE
 
-    
-
     async def start_view_change(self, request):
         self.current_state = State.VIEW_CHANGE
         #TODO: run the view change protocol
         self.current_state = State.NORMAL
 
-    
     async def send_view_change(self):
         #change to view change mode
         #send out view change message
@@ -162,11 +159,6 @@ class replica:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit)
         
-    # Will replace send_message eventually
-    async def add_to_message_queue(self, ip_addr, data):
-        pass
-        await self.message_out_queue.put(data)
-        await asyncio.sleep(0)
 
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
@@ -243,7 +235,8 @@ class replica:
             #go into state transfer mode
             # TODO: implement
             pass
-        else:  
+        else:
+            
             return web.Response()
             
         self.timer.start()
