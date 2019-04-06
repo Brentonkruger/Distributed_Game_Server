@@ -80,16 +80,46 @@ class replica:
         
 
 
+		# WORKING HERE
     async def start_recovery(self, request):
         #stop timer running
         self.current_state = State.RECOVERING
-        #TODO: run the recovery protocol
-        #Send broadcast to all replicas with random nonce 
+		
+        #Send broadcast to all replicas with random nonce and its address
         nonce = secrets.randbits(32)
-        # self.replica_broadcast()
-
-        #Update state from responses until majority is recieved
+        message = {
+            "Type": "Recover",
+            "N_replica": self.local_ip,
+            "Nonce": nonce
+	    }
+		
+        self.replica_broadcast("post", "Recover", message)
+		
+		# Waiting until enough responses received
+        i = 0
+        while i < (len(self.other_replicas) / 2) + 1:
+            for rep in self.other_replicas:
+                reply = await self.send_message(str(rep), "get", "RecoverResponse", None)
+                response = await reply.text()
+                update = json.loads(response)
+                # Save state information if response is from primary
+                if update["N_replica"] == self.primary:
+		            #TODO update state of replica
+                    pass
+                i += 1
+		
+        #Update state from responses once majority is received
         self.current_state = State.NORMAL
+
+		# WORKING ON ABOVE
+
+    
+
+    async def start_view_change(self, request):
+        self.current_state = State.VIEW_CHANGE
+        #TODO: run the view change protocol
+        self.current_state = State.NORMAL
+
     
     async def send_view_change(self):
         #change to view change mode
@@ -132,16 +162,18 @@ class replica:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit)
         
+    # Will replace send_message eventually
+    async def add_to_message_queue(self, ip_addr, data):
+        pass
+        await self.message_out_queue.put(data)
+        await asyncio.sleep(0)
+
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
             
-    async def start_view_change(self, request):
-        self.current_state = State.VIEW_CHANGE
-        #TODO: run the view change protocol
-        self.current_state = State.NORMAL
 
     async def player_move(self, request):
         #check if the move has already been made (op number)
@@ -231,14 +263,26 @@ class replica:
         #send back the recover message
         if self.primary == self.local_ip:
             #return the intense answer
-            #TODO: implement
-            pass
+            body = request.json()
+            txt = json.loads(body)
+            nonce = txt['Nonce']
+            reply = json.dumps({
+                "Type": "RecoverResponse",
+                "N_View": self.n_view,
+                "Nonce": nonce,
+                "Log": self.log,
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit
+            })
+            return web.Response(body = reply)
         else:
             #return the small answer
             body = await request.json()
             text = json.loads(body)
             msg = json.dumps({"Type": "RecoveryResponse","N_View":self.n_view,"Nonce":text['Nonce'],"Log":"Nil","N_Operation":"Nil","N_Commit":"Nil"})
             return web.Response(body = msg)
+         
+        
 
     async def replica_list(self, request):
         #format the replica list and return it to the backup

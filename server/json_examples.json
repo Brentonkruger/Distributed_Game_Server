@@ -155,7 +155,7 @@
             "N_replica": 2,
             "Nonce": "xxxx"
         },
-        //response from /Recover is RecoveryResponse
+        //response from /Response
         {
             "Type": "RecoverResponse",
             "N_View": 0,
