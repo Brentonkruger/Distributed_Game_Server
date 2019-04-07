@@ -205,7 +205,7 @@ class replica:
     async def send_commit(self):
         #send out the commit message as a heartbeat
         msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
-        resp = await self.replica_broadcast("post", "Commit", msg)
+        await self.replica_broadcast("post", "Commit", msg)
         self.timer.start()
 
     async def replica_broadcast(self, req_type, req_location, msg):
@@ -239,7 +239,7 @@ class replica:
 
     async def get_new_primary_replica(self, old_ip):
         index = self.all_replicas.index(old_ip)
-        return self.all_replicas[index + 1]
+        return self.all_replicas[(index + 1) % len(self.all_replicas)]
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -251,12 +251,12 @@ class replica:
 
     async def player_move(self, request):
         #check if the move has already been made (op number)
+        #TODO: stop timer and reset
         msg = await request.json()
         if type(msg) == dict:
             text = msg
         else:
             text = json.loads(msg)
-        
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
             if len(self.log) >= text['N_Operation']:
@@ -270,8 +270,6 @@ class replica:
                 #update commit number
                 return web.Response()
         
-
-
         #backups recieve the player move and adds it to the gamestate, then replies when it's finished
         else:
             #TODO:apply update
@@ -337,11 +335,11 @@ class replica:
             text = json.loads(msg)
         if text["N_View"] > self.n_view or text["N_Commit"] > self.n_commit:
             await self.start_state_transfer()
-        
-        return web.Response()
-            
         self.timer.start()
         #don't update client about this one.
+        return web.Response()
+            
+        
 
     async def start_view(self, request):
         body = await request.json()
@@ -368,7 +366,7 @@ class replica:
         tmp_list = self.other_replicas
         # print(random.sample(tmp_list,1))
         resp = await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
-        #TODO: finish by updating your own stuff, and return to serving stuff.
+        #update state
         txt = json.loads(await resp.text())
         self.n_view = txt['N_View']
         self.n_operation = txt['N_Operation']
@@ -426,7 +424,7 @@ class replica:
                 if request.remote not in self.other_replicas:
                     self.other_replicas.append(request.remote)
             body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas], })
-            resp = await self.replica_broadcast("post", "UpdateReplicaList", body)
+            await self.replica_broadcast("post", "UpdateReplicaList", body)
             return web.Response()
         else: 
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
