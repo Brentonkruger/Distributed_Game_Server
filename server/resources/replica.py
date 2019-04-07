@@ -158,7 +158,8 @@ class replica:
             self.n_start_view_change_messages += 1
 
             # Wait for f StartViewMessages from other replicas
-            self.request_primary_ip
+            # Get new primary replica
+            new_primary = self.get_new_primary_replica
             if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
                 self.do_view_change
 
@@ -200,6 +201,10 @@ class replica:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit, self.loop)
             self.timer.start(7, self.send_commit)
+
+    async def get_new_primary_replica(self, old_ip):
+        index = self.all_replicas.index(old_ip)
+        return self.all_replicas[index + 1]
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -300,9 +305,8 @@ class replica:
             })
 
         # Send DoViewChange to new primary
-        # Below needs to be changed to get new primary
-        # self.request_primary_ip()
-        self.send_message(self.primary, "post", "DoViewChange", reply)
+        new_primary = self.get_new_primary_replica
+        self.send_message(new_primary, "post", "DoViewChange", reply)
 
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
         if self.primary == self.local_ip:
