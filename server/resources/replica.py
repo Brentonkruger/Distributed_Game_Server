@@ -54,15 +54,14 @@ class replica:
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
-        self.n_view_old = 0
         self.n_commit = 0
         self.n_operation = 0
         self.n_recovery_messages = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
-        #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
         self.log = []
 
         #get Ip of the local computer
@@ -73,6 +72,7 @@ class replica:
         print("IP address: ", self.local_ip)
         s.close()
         self.all_replicas.append(self.local_ip)
+        
 
         #start the local loop to allow for asyncio (starts the server)       
         self.loop = asyncio.get_event_loop()
@@ -125,53 +125,86 @@ class replica:
 
     async def start_view_change(self, request):
         #recieves this message from other nodes to start the process.
-        
-        # Disable timer
-        self.timer.cancel()
-        
-        # Save old view number before view change was called
+        try:
+            self.timer.cancel()
+        except:
+            pass
+
         if self.current_state != State.VIEW_CHANGE:
-            self.n_view_old = self.n_view
-            
-        # Advance view number
-        self.n_view += 1
-    
-        # Set state to view change
-        self.current_state = State.VIEW_CHANGE
-
-        # Create json for StartViewChange
-        message = json.dumps({
-            "N_View": self.n_view,
-            "N_replica": self.local_ip
-        })
-
-        # Broadcast StartViewChange to all other replicas
-        self.replica_broadcast("post", "StartViewChange", message)
+            self.current_state = State.VIEW_CHANGE
+            self.n_view += 1   
 
         # Check to see if view number is the same
         reply = await request.json()
         txt = json.loads(reply)
-        if self.n_view < txt["N_View"]:
-            self.start_view_change
 
-        if self.n_view == txt["N_View"]:
+        if self.n_view >= txt["N_View"]:
+            if not self.start_view_change_sent:
+                message = json.dumps({
+                    "N_View": self.n_view,
+                    "N_replica": self.local_ip})
+                self.replica_broadcast("post", "StartViewChange", message)
+                self.start_view_change_sent = True
             self.n_start_view_change_messages += 1
-
-            # Wait for f StartViewMessages from other replicas
-            self.request_primary_ip
-            if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
-                self.do_view_change
+            
+        if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
+            msg = json.dumps({
+                "Type": "DoViewChange",
+                "N_View": self.n_view,
+                "Log": [i for i in self.log],
+                "N_View_Old": self.n_view-1,
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit,
+                "N_replica": self.local_ip
+                })
+            # Send DoViewChange to new primary
+            #TODO: switch to the new primary address
+            # self.request_primary_ip()
+            self.send_message(self.primary, "post", "DoViewChange", msg)
+        return web.Response()
 
     async def send_view_change(self):
         #change to view change mode
-        #send out view change message
-        print("timer expired")
-        # TODO: implement
-        pass
+        #send out initial view change message
+        self.current_state = State.VIEW_CHANGE
+        self.n_view += 1
+        message = json.dumps({
+            "N_View": self.n_view,
+            "N_replica": self.local_ip})
+        self.replica_broadcast("post", "StartViewChange", message)
+        self.start_view_change_sent = True
+
+
+    async def do_view_change(self, request):
+        # If replica is primary, wait for f + 1 DoViewChange responses and update information
+        if self.primary == self.local_ip:
+            reply = await request.json()
+            txt = reply.loads(reply)
+            #update the primary if behind 
+            if self.n_view <= txt["N_View"]:
+                if self.n_operation < txt["N_Operation"]:
+                    self.log = txt["Log"]
+                    self.n_operation = txt["N_Operation"]
+                    self.n_commit = txt["N_Commit"]
+
+            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
+                # Change status back to normal and send startview message to other replicas
+                self.current_state = State.NORMAL
+                # StartView json
+                startview_message = json.dumps({
+                    "Type": "StartView",
+                    "N_View": self.n_view,
+                    "Log": self.log,
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit
+                })
+
+                # Broadcast message to other replicas
+                self.replica_broadcast("post", "StartView", startview_message)
+                self.timer.start(7, self.send_commit)
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
-        # print("sending commit")
         msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
         resp = await self.replica_broadcast("post", "Commit", msg)
         self.timer.start()
@@ -287,49 +320,7 @@ class replica:
         #TODO: implement
         pass
 
-    async def do_view_change(self, request):
-        #send the doviewchange message
-        reply = json.dumps({
-            "Type": "DoViewChange",
-            "N_View": self.n_view,
-            "Log": self.log,
-            "N_View_Old": self.n_view_old,
-            "N_Operation": self.n_operation,
-            "N_Commit": self.n_commit,
-            "N_replica": self.local_ip
-            })
-
-        # Send DoViewChange to new primary
-        # Below needs to be changed to get new primary
-        # self.request_primary_ip()
-        self.send_message(self.primary, "post", "DoViewChange", reply)
-
-        # If replica is primary, wait for f + 1 DoViewChange responses and update information
-        if self.primary == self.local_ip:
-            reply = await request.json()
-            txt = reply.loads(reply)
-            
-            if self.n_view_old == txt["N_View_Old"] and self.n_operation < txt["N_Operation"]:
-                self.log = txt["Log"]
-
-            if self.n_commit < txt["N_Commit"]:
-                self.n_commit = txt["N_Commit"]
-
-            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
-                # Change status back to normal and send startview message to other replicas
-                self.current_state = State.NORMAL
-
-                # StartView json
-                startview_message = json.dumps({
-                    "Type": "StartView",
-                    "N_View": self.n_view,
-                    "Log": self.log,
-                    "N_Operation": self.n_operation,
-                    "N_Commit": self.n_commit
-                })
-
-                # Broadcast message to other replicas
-                self.replica_broadcast("post", "StartView", startview_message)
+    
 
 
     async def apply_commit(self, request):
@@ -371,20 +362,17 @@ class replica:
         }
         # self.send_message(self.other_replicas[random.randint(0,len(self.other_replicas))], "get", "GetState", msg)
         tmp_list = self.other_replicas
-        # print([i for i in tmp_list])
-        print(random.sample(tmp_list,1))
+        # print(random.sample(tmp_list,1))
         await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
 
 
     async def get_state(self, request):
-
-        #TODO: set op number to commit number, clear logs before that
         self.n_operation = self.n_commit
         self.log = self.log[:self.n_operation+1]
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
-            "Log":self.log[-1],
+            "Log":self.log[-1:],
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
         return web.Response(body = msg)
