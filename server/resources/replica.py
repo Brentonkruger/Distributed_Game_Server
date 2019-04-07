@@ -280,8 +280,21 @@ class replica:
     async def start_game(self):
         #finalize the servers on game start
         #send the message to the clients to begin the game
-        #TODO: implement
-        pass
+
+        ####################### IMPORTANT #######################
+        # Current logic is the board is 2x the number of players
+        # Change below if we want logic to change
+        ####################### IMPORTANT #######################
+        size = int(len(self.client_list)) * 2
+        game_board = board.Board(size)
+        gamestate = game_board.get_full_gamestate()
+        for i in self.client_list:
+            start = json.dumps({
+                "Type": "GameStart",
+                "Client_ID": i,
+                "Gamestate": gamestate
+            })
+            self.session.post("http://" + self.routing_layer + ":5000/join", data=start)
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
