@@ -233,6 +233,10 @@ class replica:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit, self.loop)
             self.timer.start(7, self.send_commit)
+
+    async def get_new_primary_replica(self, old_ip):
+        index = self.all_replicas.index(old_ip)
+        return self.all_replicas[index + 1]
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -319,9 +323,6 @@ class replica:
     async def receive_gamestate(self, request):
         #TODO: implement
         pass
-
-    
-
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
