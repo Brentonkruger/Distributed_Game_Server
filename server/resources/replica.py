@@ -330,6 +330,7 @@ class replica:
     async def start_game(self):
         #finalize the servers on game start
         #send the message to the clients to begin the game
+        self.game_running = True
 
         ####################### IMPORTANT #######################
         # Current logic is the board is 2x the number of players
