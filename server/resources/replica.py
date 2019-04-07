@@ -7,7 +7,7 @@ import json
 from aiohttp import web
 import aiohttp
 import random
-import board
+from . import board
 
 class Mode(Enum):
     BACKUP = 0
@@ -50,7 +50,7 @@ class replica:
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
-        self.client_list = []
+        self.client_list = {}
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
@@ -160,10 +160,7 @@ class replica:
             resp = await self.send_message(self.primary, "get", "GetReplicaList", msg)
             txt = json.loads(await resp.text())
 
-            #TODO:check response for current state, start recovery if behind.
-            if txt['N_Commit']> self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View']> self.n_view:
-                #Start recovery!!
-                self.start_recovery()
+            
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(10, self.send_view_change, self.loop)
@@ -221,8 +218,8 @@ class replica:
         #check for a running game
         if not self.game_running:
             if request.remote not in self.client_list:
-                self.client_list.append(request.remote)
-            self.client_list.sort()
+                self.client_list[request.remote] = len(self.client_list)
+                print("added client")
             if self.local_ip == self.primary:
                 msg = await request.json()
                 if type(msg) == dict:
@@ -231,7 +228,7 @@ class replica:
                     text = json.loads(msg)
                 resp = json.dumps({
                     "Type": "ClientJoinOK",
-                    "Client_ID": request.remote,
+                    "Client_ID": self.client_list[request.remote],
                     "N_Request": text['N_Request']})
                 return web.Response(body = resp)
             else:
@@ -308,6 +305,9 @@ class replica:
     
     async def start_state_transfer(self):
         #send state transfer
+        #TODO: set op number to commit number, clear logs before that
+        self.n_operation = self.n_commit
+        self.log = self.log[:self.n_operation+1]
         msg = {
             "Type": "GetState",
             "N_View":self.n_view,
@@ -322,14 +322,13 @@ class replica:
 
 
     async def get_state(self, request):
+        body = await request.json()
+        txt = json.loads(body)
 
-        #TODO: set op number to commit number, clear logs before that
-        self.n_operation = self.n_commit
-        self.log = self.log[:self.n_operation+1]
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
-            "Log":self.log[-1],
+            "Log":[i for i in self.log[txt['N_Operation']:]],
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
         return web.Response(body = msg)
@@ -373,8 +372,7 @@ class replica:
                     print("Added\t" + request.remote)
                 if request.remote not in self.other_replicas:
                     self.other_replicas.append(request.remote)
-
-            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas]})
+            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas], })
             resp = await self.replica_broadcast("post", "UpdateReplicaList", body)
             return web.Response()
         else: 
@@ -383,13 +381,15 @@ class replica:
     async def update_replicas(self, request):
         if self.local_ip == self.primary:
             body = await request.json()
-            body = json.loads(body)
-            newList = body["Replica_List"]
+            txt = json.loads(body)
+            newList = txt["Replica_List"]
             for i in newList:
                 if i not in self.all_replicas:
                     self.all_replicas.append(i)
                 if i not in self.other_replicas and i != self.local_ip:
                     self.other_replicas.append(i)
+            if txt['N_Commit']> self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View']> self.n_view:
+                self.start_recovery()
             return web.Response()
         else: 
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
