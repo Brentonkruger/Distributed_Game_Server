@@ -1,5 +1,6 @@
 import unittest
 from resources import board
+from VR_replica import replica
 
 class TestingBoard(unittest.TestCase):
     def setUp(self):
@@ -18,6 +19,14 @@ class TestingBoard(unittest.TestCase):
 
     def test_powerup_assignment_to_legal_location(self):
         self.assertTrue(self.brd.add_powerup(3,3))
+
+
+
+
+class TestingNetwork(unittest.TestCase):
+    def test_network_connection_by_creating_replica(self):
+        self.rep = replica.replica()
+        self.assertTrue(True)
 
 
 if __name__ == '__main__':

@@ -1,28 +1,55 @@
-from flask import Flask, request
+#!/usr/bin/python3
+
+from flask import Flask, request, jsonify, request
 import json
+import requests 
 app = Flask(__name__)
 
-player_data = {}
+players = []
+mainServerIP = -1
 
-# Function that will take inputs from the query parameters, and return the newly processed data back.
-def buildJson(name, location, desired_move):
-    player_data[name] = {}
-    player_data[name]['Location'] = location
-    player_data[name]['New Location'] = 'Need to calculate'
-    jsonified = json.dumps(player_data[name])
-    return jsonified
+################################################# ClIENT FUCNTIONS ###################################
 
-# This function needs to somehow return the values of the other players
-# It also might do some processing, which is why it is a seperate function
-def getPlayers():
-    data = json.dumps(player_data)
-    return data
+#connects clients to the game
+@app.route("/connectPlayer", methods=["GET"])
+def connectPlayer():
+	ip = request.remote_addr
+	if ip not in players:
+		players.append(ip)
+	return 'Recieved'
 
+#forwards moves from the client to the main server
+@app.route("/forwardToMainServer", methods=['POST'])
+def sendMoves():
+	moves = request.get_json()
+	print (moves)
+	requests.post(mainServerIP, data=moves)
+	return 'Recieved'
 
-@app.route('/calculate')
-def calculate():
-    return buildJson(request.args.get('name'), request.args.get('location'), request.args.get('move'))
+################################################# SERVER FUCNTIONS ###################################
 
-@app.route('/players')
-def players():
-    return getPlayers()
+#recieves updated main server ip from a server
+@app.route("/updateMainServer", methods=['POST'])
+def updateMainServer():
+	mainServerIP = request.get_json('ip')
+	return 'Recieved'
+
+#forwards game state from main server to all clients
+@app.route("/updatePlayersGameState", methods=['POST'])
+def updatePlayersGameState():
+	gameState = request.get_json()
+	for ip in players:
+		requests.post(ip, data=gameState)
+	return 'Recieved'
+
+#returns the main server ip
+#	-if no main server yet, sets the requesting server to the main server and returns the same servers address
+@app.route("/join", methods=['GET'])
+def join():
+	global mainServerIP
+	if mainServerIP != -1:
+		return jsonify({'Type': 'JoinOK', "Primary_IP": str(mainServerIP)})
+	else:
+		mainServerIP = request.remote_addr
+		return jsonify({'Type': 'JoinOK', "Primary_IP": str(mainServerIP)})
+

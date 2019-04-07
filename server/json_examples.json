@@ -1,0 +1,194 @@
+
+{
+    "Message_Types": [
+
+    //// Client -> Server messages /////
+
+        // send to POST /PlayerMovement
+        {
+            "Type": "PlayerMovement",
+            "Operation": "U",
+            "Client_ID": 2,
+            "N_Request": 5 
+        },
+
+        // send to POST /ClientJoin
+        {
+            "Type": "ClientJoin",
+            "N_Request": 0 
+        },
+        //response from ClientJoin is ClientJoinOK
+        {
+            "Type": "ClientJoinOK",
+            "Client_ID": 1,
+            "N_Request": 0 
+        },
+
+        //send to POST /Ready
+        {
+            "Type": "Ready",
+            "Client_ID": 2,
+            "N_Request": 5 
+        },//response is OK
+
+
+    //// Server -> Routing messages ////
+        
+        // sent to GET /Join
+        {
+            "Type": "Join"
+        },
+        //response from /Join is JoinOK
+        {
+            "Type": "JoinOK",
+            "Primary_IP": "192.0.2.0"
+        },
+        //send to /NewPrimary
+        {
+            "Type": "New_Primary",
+            "IP": "192.0.2.0"
+        }, //reply is ok
+
+    //// Server -> Client messages ////
+
+        //send to POST /GameUpdate
+        {
+            "Type": "GameUpdate",
+            "Gamestate": {
+                "powerup_locations": [
+                    {"x": 1, "y": 0}
+                ], 
+                "cracked_locations": {(0, 1), (2, 2)}, 
+                "stable_locations": {(0, 0), (2, 1), (2, 0), (1, 1), (1, 0), (0, 2)}, 
+                "hole_locations": {(1, 2)}, 
+                "player_list": [
+                    {'id': 0, 'current_location': (1, 1), 'power': 1}, 
+                    {'id': 1, 'current_location': (1, 2), 'power': 0, 'dead':True}]
+                }
+        },
+        //send to POST /GameStart
+        {
+            "Type": "GameStart",
+            "Client_ID": 2,
+            "Gamestate": "Gamestate stuff"
+        },
+
+    //// Primary -> Backup messages ////
+
+        // send to GET /ComputeGameState
+        {
+            "Type": "ComputeGameState",
+            "N_View": 0,
+            "N_Operation": 16,
+            "N_Commit": 15
+        },
+        
+        // send to POST /StartView
+        {
+            "Type": "StartView",
+            "N_View": 1,
+            "Log": "Log things",
+            "N_Operation": 16,
+            "N_Commit": 15
+        },
+
+        // send to POST /UpdateReplicaList as update for GetReplicaList
+        {
+            "Type": "UpdateReplicaList",
+            "Replica_List": [
+                "192.0.2.0",
+                "192.0.2.0",
+                "192.0.2.0",
+                "192.0.2.0"
+            ],
+            "N_Commit": 0,
+            "N_Operation":0,
+            "N_View":0
+        },//Reply is OK
+
+        // send to POST /Commit
+        {
+            "Type": "Commit",
+            "N_View": 0,
+            "N_Commit": 15
+        },
+
+    //// Backup -> Primary messages ////
+
+        // send to GET /GetReplicaList
+        {
+            "Type": "GetReplicaList",
+            "IP": "192.0.2.0"
+            
+        },
+
+        //response from /ComputeGameState is GameState
+        {
+            "Type": "ComputeGameState",
+            "N_View": 0,
+            "N_Operation": 16,
+            "N_Commit": 15
+        },
+
+
+    //// Backup -> Backup messages ////
+
+        // send to POST /StartViewChange
+        {
+            "N_View": 1,
+            "N_replica": 2
+        },
+        // send to POST /DoViewChange
+        {
+            "Type": "DoViewChange",
+            "N_View": 1,
+            "Log": "Log things",
+            "N_View_Old": 0,
+            "N_Operation": 16,
+            "N_Commit": 15,
+            "N_replica": 2
+        },
+        //send to GET /GetState
+        {
+            "Type": "GetState",
+            "N_View":0,
+            "N_Operation":16,
+            "N_Replica":2
+        },
+        //response to /GetState is NewState
+        {
+            "Type": "NewState",
+            "N_View":1,
+            "Log": "Log things",
+            "N_Operation": 16,
+            "N_Commit":15
+        },
+        // send to POST /Recover
+        {
+            "Type": "Recover",
+            "N_replica": 2,
+            "Nonce": "xxxx"
+        },
+        //send to POST from /Recover
+        {
+            "Type": "RecoverResponse",
+            "N_View": 0,
+            "Nonce": "xxxx",
+            "Log": "Log things | none if not primary",
+            "N_Operation": "16 | none if not primary",
+            "N_Commit": "15 | none if not primary",
+            "N_replica": 2
+        }
+ 
+    ]
+
+}
+
+
+
+    
+    
+    
+     
+    
+
