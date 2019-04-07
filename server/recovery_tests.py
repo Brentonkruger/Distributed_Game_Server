@@ -3,12 +3,14 @@ import json
 import secrets
 import socket
 import asyncio
-from VR_replica import replica
 
 class TestingRecovery (unittest.TestCase):
     
     # Testing recovery message broadcast
     def test_recovery_broadcast(self):
+        string = "127.0.0.1"
+        x = string.split(".")
+        print(x)
         return False
 
     # Testing recovery response

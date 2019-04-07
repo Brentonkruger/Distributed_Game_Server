@@ -54,9 +54,12 @@ class replica:
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
+        self.n_view_old = 0
         self.n_commit = 0
         self.n_operation = 0
         self.n_recovery_messages = 0
+        self.n_start_view_change_messages = 0
+        self.n_do_view_change_messages = 0
         self.primary_recovery_response = False
         self.game_running = False
         #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
@@ -122,10 +125,42 @@ class replica:
 
     async def start_view_change(self, request):
         #recieves this message from other nodes to start the process.
-        #return the 
+        
+        # Disable timer
+        self.timer.cancel()
+        
+        # Save old view number before view change was called
+        if self.current_state != State.VIEW_CHANGE:
+            self.n_view_old = self.n_view
+            
+        # Advance view number
+        self.n_view += 1
+    
+        # Set state to view change
         self.current_state = State.VIEW_CHANGE
-        #TODO: run the view change protocol
-        self.current_state = State.NORMAL
+
+        # Create json for StartViewChange
+        message = json.dumps({
+            "N_View": self.n_view,
+            "N_replica": self.local_ip
+        })
+
+        # Broadcast StartViewChange to all other replicas
+        self.replica_broadcast("post", "StartViewChange", message)
+
+        # Check to see if view number is the same
+        reply = await request.json()
+        txt = json.loads(reply)
+        if self.n_view < txt["N_View"]:
+            self.start_view_change
+
+        if self.n_view == txt["N_View"]:
+            self.n_start_view_change_messages += 1
+
+            # Wait for f StartViewMessages from other replicas
+            self.request_primary_ip
+            if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
+                self.do_view_change
 
     async def send_view_change(self):
         #change to view change mode
@@ -254,19 +289,48 @@ class replica:
 
     async def do_view_change(self, request):
         #send the doviewchange message
-        #{
-        #     "Type": "DoViewChange",
-        #     "N_View": 1,
-        #     "Log": "Log things",
-        #     "N_View_Old": 0,
-        #     "N_Operation": 16,
-        #     "N_Commit": 15,
-        #     "N_replica": 2
-        # }
-        #TODO: implement
-        pass
+        reply = json.dumps({
+            "Type": "DoViewChange",
+            "N_View": self.n_view,
+            "Log": self.log,
+            "N_View_Old": self.n_view_old,
+            "N_Operation": self.n_operation,
+            "N_Commit": self.n_commit,
+            "N_replica": self.local_ip
+            })
 
-    
+        # Send DoViewChange to new primary
+        # Below needs to be changed to get new primary
+        # self.request_primary_ip()
+        self.send_message(self.primary, "post", "DoViewChange", reply)
+
+        # If replica is primary, wait for f + 1 DoViewChange responses and update information
+        if self.primary == self.local_ip:
+            reply = await request.json()
+            txt = reply.loads(reply)
+            
+            if self.n_view_old == txt["N_View_Old"] and self.n_operation < txt["N_Operation"]:
+                self.log = txt["Log"]
+
+            if self.n_commit < txt["N_Commit"]:
+                self.n_commit = txt["N_Commit"]
+
+            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
+                # Change status back to normal and send startview message to other replicas
+                self.current_state = State.NORMAL
+
+                # StartView json
+                startview_message = json.dumps({
+                    "Type": "StartView",
+                    "N_View": self.n_view,
+                    "Log": self.log,
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit
+                })
+
+                # Broadcast message to other replicas
+                self.replica_broadcast("post", "StartView", startview_message)
+
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
@@ -287,8 +351,6 @@ class replica:
         #don't update client about this one.
 
     async def start_view(self, request):
-        #recieve the new view message to begin the next view
-        #TODO: implement
         body = await request.json()
         txt = json.loads(body)
         self.n_view = txt['N_View']
@@ -395,7 +457,7 @@ class replica:
         self.app.add_routes([web.post('/PlayerMovement', self.player_move),
                             web.post('/ClientJoin', self.client_join),
                             web.post('/Ready', self.readied_up),
-
+                            
                             web.post('/StartViewChange', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
