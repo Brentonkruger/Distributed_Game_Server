@@ -50,6 +50,7 @@ class replica:
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
+        self.ready_up = []
         self.client_list = {}
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
@@ -307,8 +308,24 @@ class replica:
 
     async def readied_up(self, request):
         #add the user's ready state
-        #TODO: implement
-        pass
+
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        
+        cid = text['Client_ID']
+        if cid not in self.ready_up:
+            self.ready_up.append(cid)
+        #primary sends backups request, who respond I guess?
+        if self.local_ip == self.primary:
+            self.replica_broadcast("post", "Ready", json.dumps(text))
+        
+        if len(self.ready_up) == len(self.client_list):
+            self.start_game()
+
+        
 
     async def start_game(self):
         #finalize the servers on game start
