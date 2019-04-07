@@ -7,7 +7,7 @@ import json
 from aiohttp import web
 import aiohttp
 import random
-import board
+from . import board
 
 class Mode(Enum):
     BACKUP = 0
@@ -50,19 +50,19 @@ class replica:
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
-        self.client_list = []
+        self.ready_up = []
+        self.client_list = {}
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
-        self.n_view_old = 0
         self.n_commit = 0
         self.n_operation = 0
         self.n_recovery_messages = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
-        #The log will be a list of the events that have occurred, the lookup will correspond to the Operation number of the request being served
         self.log = []
 
         #get Ip of the local computer
@@ -73,6 +73,7 @@ class replica:
         print("IP address: ", self.local_ip)
         s.close()
         self.all_replicas.append(self.local_ip)
+        
 
         #start the local loop to allow for asyncio (starts the server)       
         self.loop = asyncio.get_event_loop()
@@ -125,56 +126,87 @@ class replica:
 
     async def start_view_change(self, request):
         #recieves this message from other nodes to start the process.
-        
-        # Disable timer
-        self.timer.cancel()
-        
-        # Save old view number before view change was called
+        try:
+            self.timer.cancel()
+        except:
+            pass
+
         if self.current_state != State.VIEW_CHANGE:
-            self.n_view_old = self.n_view
-            
-        # Advance view number
-        self.n_view += 1
-    
-        # Set state to view change
-        self.current_state = State.VIEW_CHANGE
-
-        # Create json for StartViewChange
-        message = json.dumps({
-            "N_View": self.n_view,
-            "N_replica": self.local_ip
-        })
-
-        # Broadcast StartViewChange to all other replicas
-        self.replica_broadcast("post", "StartViewChange", message)
+            self.current_state = State.VIEW_CHANGE
+            self.n_view += 1   
 
         # Check to see if view number is the same
         reply = await request.json()
         txt = json.loads(reply)
-        if self.n_view < txt["N_View"]:
-            self.start_view_change
 
-        if self.n_view == txt["N_View"]:
+        if self.n_view >= txt["N_View"]:
+            if not self.start_view_change_sent:
+                message = json.dumps({
+                    "N_View": self.n_view,
+                    "N_replica": self.local_ip})
+                self.replica_broadcast("post", "StartViewChange", message)
+                self.start_view_change_sent = True
             self.n_start_view_change_messages += 1
-
-            # Wait for f StartViewMessages from other replicas
-            # Get new primary replica
-            new_primary = self.get_new_primary_replica
-            if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
-                self.do_view_change
+            
+        if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
+            msg = json.dumps({
+                "Type": "DoViewChange",
+                "N_View": self.n_view,
+                "Log": [i for i in self.log],
+                "N_View_Old": self.n_view-1,
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit,
+                "N_replica": self.local_ip
+                })
+            # Send DoViewChange to new primary
+            self.primary = self.get_new_primary_replica(self.primary)
+            self.send_message(self.primary, "post", "DoViewChange", msg)
+        return web.Response()
 
     async def send_view_change(self):
         #change to view change mode
-        #send out view change message
-        print("timer expired")
-        # TODO: implement
-        pass
+        #send out initial view change message
+        self.current_state = State.VIEW_CHANGE
+        self.n_view += 1
+        message = json.dumps({
+            "N_View": self.n_view,
+            "N_replica": self.local_ip})
+        self.replica_broadcast("post", "StartViewChange", message)
+        self.start_view_change_sent = True
+
+
+    async def do_view_change(self, request):
+        # If replica is primary, wait for f + 1 DoViewChange responses and update information
+        if self.primary == self.local_ip:
+            reply = await request.json()
+            txt = reply.loads(reply)
+            #update the primary if behind 
+            if self.n_view <= txt["N_View"]:
+                if self.n_operation < txt["N_Operation"]:
+                    self.log = txt["Log"]
+                    self.n_operation = txt["N_Operation"]
+                    self.n_commit = txt["N_Commit"]
+
+            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
+                # Change status back to normal and send startview message to other replicas
+                self.current_state = State.NORMAL
+                # StartView json
+                startview_message = json.dumps({
+                    "Type": "StartView",
+                    "N_View": self.n_view,
+                    "Log": self.log,
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit
+                })
+
+                # Broadcast message to other replicas
+                self.replica_broadcast("post", "StartView", startview_message)
+                self.timer.start(7, self.send_commit)
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
-        # print("sending commit")
         msg = json.dumps({"Type": "Commit", "N_View": self.n_view, "N_Commit": self.n_commit})
-        resp = await self.replica_broadcast("post", "Commit", msg)
+        await self.replica_broadcast("post", "Commit", msg)
         self.timer.start()
 
     async def replica_broadcast(self, req_type, req_location, msg):
@@ -182,6 +214,7 @@ class replica:
             await self.send_message(str(rep),req_type, req_location, msg)
 
     async def request_primary_ip(self):
+        # start up the game, and get the current state of the game. Run recovery if necessary.
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
@@ -192,7 +225,10 @@ class replica:
 
             #connect to primary and ask for updated replica list
             msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
-            await self.send_message(self.primary, "get", "GetReplicaList", msg)
+            resp = await self.send_message(self.primary, "get", "GetReplicaList", msg)
+            txt = json.loads(await resp.text())
+
+            
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(10, self.send_view_change, self.loop)
@@ -204,7 +240,7 @@ class replica:
 
     async def get_new_primary_replica(self, old_ip):
         index = self.all_replicas.index(old_ip)
-        return self.all_replicas[index + 1]
+        return self.all_replicas[(index + 1) % len(self.all_replicas)]
         
 
     async def send_message(self, ip_addr, req_type, req_location, data):
@@ -216,12 +252,12 @@ class replica:
 
     async def player_move(self, request):
         #check if the move has already been made (op number)
+        #TODO: stop timer and reset
         msg = await request.json()
         if type(msg) == dict:
             text = msg
         else:
             text = json.loads(msg)
-        
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
             if len(self.log) >= text['N_Operation']:
@@ -235,8 +271,6 @@ class replica:
                 #update commit number
                 return web.Response()
         
-
-
         #backups recieve the player move and adds it to the gamestate, then replies when it's finished
         else:
             #TODO:apply update
@@ -254,8 +288,8 @@ class replica:
         #check for a running game
         if not self.game_running:
             if request.remote not in self.client_list:
-                self.client_list.append(request.remote)
-            self.client_list.sort()
+                self.client_list[request.remote] = len(self.client_list)
+                print("added client")
             if self.local_ip == self.primary:
                 msg = await request.json()
                 if type(msg) == dict:
@@ -264,7 +298,7 @@ class replica:
                     text = json.loads(msg)
                 resp = json.dumps({
                     "Type": "ClientJoinOK",
-                    "Client_ID": request.remote,
+                    "Client_ID": self.client_list[request.remote],
                     "N_Request": text['N_Request']})
                 return web.Response(body = resp)
             else:
@@ -274,8 +308,24 @@ class replica:
 
     async def readied_up(self, request):
         #add the user's ready state
-        #TODO: implement
-        pass
+
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        
+        cid = text['Client_ID']
+        if cid not in self.ready_up:
+            self.ready_up.append(cid)
+        #primary sends backups request, who respond I guess?
+        if self.local_ip == self.primary:
+            self.replica_broadcast("post", "Ready", json.dumps(text))
+        
+        if len(self.ready_up) == len(self.client_list):
+            self.start_game()
+
+        
 
     async def start_game(self):
         #finalize the servers on game start
@@ -305,50 +355,6 @@ class replica:
         #TODO: implement
         pass
 
-    async def do_view_change(self, request):
-        #send the doviewchange message
-        reply = json.dumps({
-            "Type": "DoViewChange",
-            "N_View": self.n_view,
-            "Log": self.log,
-            "N_View_Old": self.n_view_old,
-            "N_Operation": self.n_operation,
-            "N_Commit": self.n_commit,
-            "N_replica": self.local_ip
-            })
-
-        # Send DoViewChange to new primary
-        new_primary = self.get_new_primary_replica
-        self.send_message(new_primary, "post", "DoViewChange", reply)
-
-        # If replica is primary, wait for f + 1 DoViewChange responses and update information
-        if self.primary == self.local_ip:
-            reply = await request.json()
-            txt = reply.loads(reply)
-            
-            if self.n_view_old == txt["N_View_Old"] and self.n_operation < txt["N_Operation"]:
-                self.log = txt["Log"]
-
-            if self.n_commit < txt["N_Commit"]:
-                self.n_commit = txt["N_Commit"]
-
-            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
-                # Change status back to normal and send startview message to other replicas
-                self.current_state = State.NORMAL
-
-                # StartView json
-                startview_message = json.dumps({
-                    "Type": "StartView",
-                    "N_View": self.n_view,
-                    "Log": self.log,
-                    "N_Operation": self.n_operation,
-                    "N_Commit": self.n_commit
-                })
-
-                # Broadcast message to other replicas
-                self.replica_broadcast("post", "StartView", startview_message)
-
-
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
         self.timer.cancel()
@@ -357,15 +363,13 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        if text["N_View"] > self.n_view:
-            await self.start_recovery()
-        if text["N_Commit"] > self.n_commit:
+        if text["N_View"] > self.n_view or text["N_Commit"] > self.n_commit:
             await self.start_state_transfer()
-        
-        return web.Response()
-            
         self.timer.start()
         #don't update client about this one.
+        return web.Response()
+            
+        
 
     async def start_view(self, request):
         body = await request.json()
@@ -380,6 +384,8 @@ class replica:
     
     async def start_state_transfer(self):
         #send state transfer
+        self.n_operation = self.n_commit
+        self.log = self.log[:self.n_operation+1]
         msg = {
             "Type": "GetState",
             "N_View":self.n_view,
@@ -388,22 +394,26 @@ class replica:
         }
         # self.send_message(self.other_replicas[random.randint(0,len(self.other_replicas))], "get", "GetState", msg)
         tmp_list = self.other_replicas
-        # print([i for i in tmp_list])
-        print(random.sample(tmp_list,1))
-        await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
-
+        # print(random.sample(tmp_list,1))
+        resp = await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
+        #update state
+        txt = json.loads(await resp.text())
+        self.n_view = txt['N_View']
+        self.n_operation = txt['N_Operation']
+        self.n_commit = txt['N_Commit']
+        self.log.append(i for i in txt['Log'])
 
     async def get_state(self, request):
+        body = await request.json()
+        txt = json.loads(body)
 
-        #TODO: set op number to commit number, clear logs before that
-        self.n_operation = self.n_commit
-        self.log = self.log[:self.n_operation+1]
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
-            "Log":self.log[-1],
+            "Log":[i for i in self.log[txt['N_Operation']:]],
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
+            
         return web.Response(body = msg)
 
     async def recovery_help(self, request):
@@ -434,8 +444,6 @@ class replica:
             self.send_message(request.remote, "post", "RecoverResponse", msg)
             return web.Response()
          
-        
-
     async def replica_list(self, request):
         #format the replica list and return it to the backup
         if self.local_ip == self.primary:
@@ -445,9 +453,8 @@ class replica:
                     print("Added\t" + request.remote)
                 if request.remote not in self.other_replicas:
                     self.other_replicas.append(request.remote)
-
-            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas]})
-            resp = await self.replica_broadcast("post", "UpdateReplicaList", body)
+            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas], })
+            await self.replica_broadcast("post", "UpdateReplicaList", body)
             return web.Response()
         else: 
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
@@ -455,13 +462,15 @@ class replica:
     async def update_replicas(self, request):
         if self.local_ip == self.primary:
             body = await request.json()
-            body = json.loads(body)
-            newList = body["Replica_List"]
+            txt = json.loads(body)
+            newList = txt["Replica_List"]
             for i in newList:
                 if i not in self.all_replicas:
                     self.all_replicas.append(i)
                 if i not in self.other_replicas and i != self.local_ip:
                     self.other_replicas.append(i)
+            if txt['N_Commit']> self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View']> self.n_view:
+                self.start_recovery()
             return web.Response()
         else: 
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
