@@ -69,6 +69,7 @@ class replica:
         self.current_turn = 0
         self.request_gamestate_update = False
         self.log = []
+        self.game_board = None
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -391,12 +392,12 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
-            #TODO: update gamestate
             update = json.dumps({
                 "Type": "GameState",
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
-                "N_Commit": self.n_commit
+                "N_Commit": self.n_commit,
+                "GameBoard": self.game_board
             })
             self.send_message(self.primary, "post", "GameState", update)
             return web.Response()
@@ -405,9 +406,10 @@ class replica:
         # Only primary should receive gamestate
         if self.primary == self.local_ip:
             update = await request.json()
-            gamestate = json.loads(update)
-            if gamestate["Type"] == "GameState":
+            response = json.loads(update)
+            if response["Type"] == "GameState":
                 self.n_gamestate_responses += 1
+                self.game_board = response["GameBoard"]
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
                 if self.current_turn
@@ -416,7 +418,7 @@ class replica:
                 #self.log
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
-                    "Gamestate": self.gamestate
+                    "Gamestate": self.game_board.complete_turn()
                 })
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 self.turn_timer.start()
@@ -424,6 +426,7 @@ class replica:
         # If not primary, send address of primary to replica
         else:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
+
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
@@ -439,7 +442,6 @@ class replica:
         #don't update client about this one.
         return web.Response()
             
-        
 
     async def start_view(self, request):
         body = await request.json()
@@ -452,6 +454,7 @@ class replica:
         self.current_state = State.NORMAL
         return web.Request()
     
+
     async def start_state_transfer(self):
         #send state transfer
         self.n_operation = self.n_commit
@@ -516,7 +519,8 @@ class replica:
                 return web.Response()
         else:
             return web.Response(status = 400)
-         
+
+
     async def replica_list(self, request):
         #format the replica list and return it to the backup
         if self.local_ip == self.primary:
