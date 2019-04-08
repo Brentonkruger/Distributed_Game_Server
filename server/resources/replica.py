@@ -66,6 +66,7 @@ class replica:
         self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
+        self.current_turn = 0
         self.request_gamestate_update = False
         self.log = []
 
@@ -263,8 +264,11 @@ class replica:
         if self.local_ip == self.primary:
             op_id = self.client_requests[text['Client_ID']][text['Client_ID']]
             if op_id <= self.n_commit:
-                return web.Response(body = self.log[op_id])
-                #TODO:resend the operation with the GameUpdate package
+                msg = json.dumps({
+                    "Type": "GameUpdate",
+                    "Gamestate": self.log[op_id]
+                })
+                return web.Response(body = msg)
                 
             else:
                 # add fields needed for the replicas (commit number op number etc.)
@@ -284,6 +288,13 @@ class replica:
         #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
             #TODO:apply update to gamestate
+            if text["N_Operation"] > self.n_operation:
+                self.n_operation = text["N_Operation"]
+            if text["N_Commit"] > self.n_commit:
+                self.n_commit = text["N_Commit"]
+            if test["N_View"] > self.n_view:
+                self.start_state_transfer()
+            turnjson = self.game_board.complete_turn()
 
             #update operation number
             #update commit number
@@ -362,15 +373,18 @@ class replica:
         # Change below if we want logic to change
         ####################### IMPORTANT #######################
         size = int(len(self.client_list)) * 2
-        game_board = board.Board(size)
-        gamestate = game_board.get_full_gamestate()
-        for i in self.client_list:
-            start = json.dumps({
-                "Type": "GameStart",
-                "Client_ID": i,
-                "Gamestate": gamestate
-            })
-            self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
+        self.game_board = board.Board(size)
+        gamestate = self.game_board.get_full_gamestate()
+        
+        start = json.dumps({
+            "Type": "GameStart",
+            "Gamestate": gamestate
+        })
+        self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
+        self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
+
+    async def turn_cutoff(self):
+        pass
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
@@ -398,6 +412,8 @@ class replica:
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
+                if self.current_turn
+                self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
                 new_gamestate = json.dumps({
@@ -405,8 +421,7 @@ class replica:
                     "Gamestate": self.gamestate
                 })
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
-
-                #TODO: Reset turn timer
+                self.turn_timer.start()
 
         # If not primary, send address of primary to replica
         else:

@@ -69,7 +69,6 @@
         //send to POST /GameStart
         {
             "Type": "GameStart",
-            "Client_ID": 2,
             "Gamestate": "Gamestate stuff"
         },
 
