@@ -224,7 +224,7 @@ class replica:
 
     async def request_primary_ip(self):
         # start up the game, and get the current state of the game.
-        resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
+        resp = await self.session.get("http://" + self.routing_layer + ":5000/Join")
         txt = await resp.text()
         a_resp = json.loads(txt)
         self.primary = a_resp['Primary_IP']
