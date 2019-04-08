@@ -68,6 +68,7 @@ class replica:
         self.game_running = False
         self.request_gamestate_update = False
         self.log = []
+        self.game_board = None
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -365,15 +366,13 @@ class replica:
         # Change below if we want logic to change
         ####################### IMPORTANT #######################
         size = int(len(self.client_list)) * 2
-        game_board = board.Board(size)
-        gamestate = game_board.get_full_gamestate()
-        for i in self.client_list:
-            start = json.dumps({
-                "Type": "GameStart",
-                "Client_ID": i,
-                "Gamestate": gamestate
-            })
-            self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
+        self.game_board = board.Board(size)
+        game_state = self.game_board.get_full_gamestate()
+        start = json.dumps({
+            "Type": "GameStart",
+            "Gamestate": game_state
+        })
+        self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
@@ -382,12 +381,12 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
-            #TODO: update gamestate
             update = json.dumps({
                 "Type": "GameState",
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
-                "N_Commit": self.n_commit
+                "N_Commit": self.n_commit,
+                "GameState": self.game_board.complete_turn()
             })
             self.send_message(self.primary, "post", "GameState", update)
             return web.Response()
@@ -415,6 +414,7 @@ class replica:
         else:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
 
+
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
         self.timer.cancel()
@@ -429,7 +429,6 @@ class replica:
         #don't update client about this one.
         return web.Response()
             
-        
 
     async def start_view(self, request):
         body = await request.json()
@@ -442,6 +441,7 @@ class replica:
         self.current_state = State.NORMAL
         return web.Request()
     
+
     async def start_state_transfer(self):
         #send state transfer
         self.n_operation = self.n_commit
