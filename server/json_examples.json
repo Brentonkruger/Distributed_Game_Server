@@ -171,7 +171,7 @@
         },
         //send to POST from /Recover
         {
-            "Type": "RecoverResponse",
+            "Type": "RecoveryResponse",
             "N_View": 0,
             "Nonce": "xxxx",
             "Log": "Log things | none if not primary",
