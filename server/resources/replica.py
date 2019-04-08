@@ -357,7 +357,7 @@ class replica:
             self.ready_up.append(cid)
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
-            self.replica_broadcast("post", "Ready", json.dumps(text))
+            await self.replica_broadcast("post", "Ready", json.dumps(text))
         
         if len(self.ready_up) == len(self.client_list):
             self.start_game()
