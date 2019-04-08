@@ -52,6 +52,8 @@ class replica:
         self.all_replicas = []
         self.ready_up = []
         self.client_list = {}
+        self.client_requests = list(list())
+        self.request_ok = []
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
@@ -260,18 +262,27 @@ class replica:
             text = json.loads(msg)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            if len(self.log) >= text['N_Operation']:
+            op_id = self.client_requests[text['Client_ID']][text['Client_ID']]
+            if op_id <= self.n_commit:
+                return web.Response(body = self.log[op_id])
                 #TODO:resend the operation with the GameUpdate package
-                pass
+                
             else:
                 # add fields needed for the replicas (commit number op number etc.)
-                await self.replica_broadcast("post", "PlayerMovement", msg)
-                #TODO:apply update
-                
-                #update commit number
+                self.n_operation += 1
+                msg = json.dumps({
+                    "Type":"PlayerMovement",
+                    "Operation": text['Operation'],
+                    "Client_ID": text['Client_ID'],
+                    "N_Request": text['N_Request'],
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit,
+                    "N_View": self.n_view})
+                await self.replica_broadcast("post", "PlayerMovement", msg)              
+
                 return web.Response()
         
-        #backups recieve the player move and adds it to the gamestate, then replies when it's finished
+            #backups recieve the player move and adds it to the gamestate, then replies when it's finished
         else:
             #TODO:apply update
             #update operation number
@@ -280,7 +291,18 @@ class replica:
     
     async def player_move_ok(self, request):
         #TODO: implement
-        pass
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        if self.local_ip == self.primary:
+            self.request_ok[text['N_Operation']] += 1
+            if self.request_ok[text['N_Operation']] > (len(self.client_list)/2):
+                #request has quorum.
+                #TODO: find out how to give the lowest return numbers without overwriting commit
+                pass
+        
 
 
     async def client_join(self, request):
