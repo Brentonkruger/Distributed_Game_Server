@@ -96,7 +96,7 @@ class replica:
     async def start_recovery(self):
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
-        
+
         self.timer.cancel()
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
@@ -284,11 +284,14 @@ class replica:
 
                 return web.Response()
         
-            #backups recieve the player move and adds it to the gamestate, then replies when it's finished
+        #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
-            #TODO:apply update
+            #TODO:apply update to gamestate
+
             #update operation number
             #update commit number
+            #if view number is different, go to state transfer mode
+
             return web.Response()
     
     async def player_move_ok(self, request):
@@ -374,8 +377,6 @@ class replica:
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
-        #TODO: implement
-
         # If primary, send bad response
         if self.primary == self.local_ip:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
@@ -392,7 +393,6 @@ class replica:
             return web.Response()
     
     async def receive_gamestate(self, request):
-        #TODO: implement
         # Only primary should receive gamestate
         if self.primary == self.local_ip:
             update = await request.json()
@@ -477,32 +477,35 @@ class replica:
         return web.Response(body = msg)
 
     async def recovery_help(self, request):
-        #send back the recover message
-        body = await request.json()
-        txt = json.loads(body)
-        if self.primary == self.local_ip:
-            #return the intense answer
-            reply = json.dumps({
-                "Type": "RecoverResponse",
-                "N_View": self.n_view,
-                "Nonce": txt['Nonce'],
-                "Log": self.log,
-                "N_Operation": self.n_operation,
-                "N_Commit": self.n_commit
-            })
-            self.send_message(request.remote, "post", "RecoverResponse", reply)
-            return web.Response()
+        if self.current_state != State.RECOVERING:        
+            #send back the recover message
+            body = await request.json()
+            txt = json.loads(body)
+            if self.primary == self.local_ip:
+                #return the intense answer
+                reply = json.dumps({
+                    "Type": "RecoverResponse",
+                    "N_View": self.n_view,
+                    "Nonce": txt['Nonce'],
+                    "Log": [i for i in self.log],
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit
+                })
+                self.send_message(request.remote, "post", "RecoveryResponse", reply)
+                return web.Response()
+            else:
+                #return the small answer
+                msg = json.dumps({
+                    "Type": "RecoveryResponse",
+                    "N_View":self.n_view,
+                    "Nonce":txt['Nonce'],
+                    "Log":"Nil",
+                    "N_Operation":"Nil",
+                    "N_Commit":"Nil"})
+                self.send_message(request.remote, "post", "RecoveryResponse", msg)
+                return web.Response()
         else:
-            #return the small answer
-            msg = json.dumps({
-                "Type": "RecoveryResponse",
-                "N_View":self.n_view,
-                "Nonce":txt['Nonce'],
-                "Log":"Nil",
-                "N_Operation":"Nil",
-                "N_Commit":"Nil"})
-            self.send_message(request.remote, "post", "RecoverResponse", msg)
-            return web.Response()
+            return web.Response(status = 400)
          
     async def replica_list(self, request):
         #format the replica list and return it to the backup
