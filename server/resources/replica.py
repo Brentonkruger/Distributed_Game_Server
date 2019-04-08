@@ -62,10 +62,13 @@ class replica:
         self.n_recovery_messages = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.n_gamestate_responses = 0
         self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
+        self.request_gamestate_update = False
         self.log = []
+        self.game_board = None
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -94,7 +97,7 @@ class replica:
     async def start_recovery(self):
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
-        
+
         self.timer.cancel()
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
@@ -282,11 +285,14 @@ class replica:
 
                 return web.Response()
         
-            #backups recieve the player move and adds it to the gamestate, then replies when it's finished
+        #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
-            #TODO:apply update
+            #TODO:apply update to gamestate
+
             #update operation number
             #update commit number
+            #if view number is different, go to state transfer mode
+
             return web.Response()
     
     async def player_move_ok(self, request):
@@ -301,6 +307,7 @@ class replica:
             if self.request_ok[text['N_Operation']] > (len(self.client_list)/2):
                 #request has quorum.
                 #TODO: find out how to give the lowest return numbers without overwriting commit
+                #TODO: Run compute gamestate function
                 pass
         
 
@@ -359,24 +366,54 @@ class replica:
         # Change below if we want logic to change
         ####################### IMPORTANT #######################
         size = int(len(self.client_list)) * 2
-        game_board = board.Board(size)
-        gamestate = game_board.get_full_gamestate()
-        for i in self.client_list:
-            start = json.dumps({
-                "Type": "GameStart",
-                "Client_ID": i,
-                "Gamestate": gamestate
-            })
-            self.session.post("http://" + self.routing_layer + ":5000/join", data=start)
+        self.game_board = board.Board(size)
+        game_state = self.game_board.get_full_gamestate()
+        start = json.dumps({
+            "Type": "GameStart",
+            "Gamestate": game_state
+        })
+        self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
-        #TODO: implement
-        pass
+        # If primary, send bad response
+        if self.primary == self.local_ip:
+            return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
+        # Send response to primary
+        else:
+            update = json.dumps({
+                "Type": "GameState",
+                "N_View": self.n_view,
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit,
+                "GameState": self.game_board.complete_turn()
+            })
+            self.send_message(self.primary, "post", "GameState", update)
+            return web.Response()
     
     async def receive_gamestate(self, request):
-        #TODO: implement
-        pass
+        # Only primary should receive gamestate
+        if self.primary == self.local_ip:
+            update = await request.json()
+            gamestate = json.loads(update)
+            if gamestate["Type"] == "GameState":
+                self.n_gamestate_responses += 1
+            # Once enough responses received, send to clients with final gamestate
+            if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
+                #TODO: update gamestate
+                #self.log
+                new_gamestate = json.dumps({
+                    "Type": "GameUpdate",
+                    "Gamestate": self.gamestate
+                })
+                self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
+
+                #TODO: Reset turn timer
+
+        # If not primary, send address of primary to replica
+        else:
+            return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
+
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
@@ -392,7 +429,6 @@ class replica:
         #don't update client about this one.
         return web.Response()
             
-        
 
     async def start_view(self, request):
         body = await request.json()
@@ -405,6 +441,7 @@ class replica:
         self.current_state = State.NORMAL
         return web.Request()
     
+
     async def start_state_transfer(self):
         #send state transfer
         self.n_operation = self.n_commit
@@ -440,32 +477,35 @@ class replica:
         return web.Response(body = msg)
 
     async def recovery_help(self, request):
-        #send back the recover message
-        body = await request.json()
-        txt = json.loads(body)
-        if self.primary == self.local_ip:
-            #return the intense answer
-            reply = json.dumps({
-                "Type": "RecoverResponse",
-                "N_View": self.n_view,
-                "Nonce": txt['Nonce'],
-                "Log": self.log,
-                "N_Operation": self.n_operation,
-                "N_Commit": self.n_commit
-            })
-            self.send_message(request.remote, "post", "RecoverResponse", reply)
-            return web.Response()
+        if self.current_state != State.RECOVERING:        
+            #send back the recover message
+            body = await request.json()
+            txt = json.loads(body)
+            if self.primary == self.local_ip:
+                #return the intense answer
+                reply = json.dumps({
+                    "Type": "RecoverResponse",
+                    "N_View": self.n_view,
+                    "Nonce": txt['Nonce'],
+                    "Log": [i for i in self.log],
+                    "N_Operation": self.n_operation,
+                    "N_Commit": self.n_commit
+                })
+                self.send_message(request.remote, "post", "RecoveryResponse", reply)
+                return web.Response()
+            else:
+                #return the small answer
+                msg = json.dumps({
+                    "Type": "RecoveryResponse",
+                    "N_View":self.n_view,
+                    "Nonce":txt['Nonce'],
+                    "Log":"Nil",
+                    "N_Operation":"Nil",
+                    "N_Commit":"Nil"})
+                self.send_message(request.remote, "post", "RecoveryResponse", msg)
+                return web.Response()
         else:
-            #return the small answer
-            msg = json.dumps({
-                "Type": "RecoveryResponse",
-                "N_View":self.n_view,
-                "Nonce":txt['Nonce'],
-                "Log":"Nil",
-                "N_Operation":"Nil",
-                "N_Commit":"Nil"})
-            self.send_message(request.remote, "post", "RecoverResponse", msg)
-            return web.Response()
+            return web.Response(status = 400)
          
     async def replica_list(self, request):
         #format the replica list and return it to the backup
