@@ -54,6 +54,7 @@ class replica:
         self.client_list = {}
         self.client_requests = list(list())
         self.request_ok = []
+        self.ready_list = []
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
@@ -358,10 +359,25 @@ class replica:
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
+        else:
+            self.send_message(self.primary, "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
         
-        if len(self.ready_up) == len(self.client_list):
+    async def ready_confirm(self, request):
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        cid = text["Client_ID"]
+        self.ready_list[cid] += 1
+        can_start = True
+        for i in self.ready_list:
+            if i < len(self.other_replicas)/2:
+                can_start = False
+        if can_start:
+            self.ready_list = [0 for i in self.ready_list]
             self.start_game()
-        
+
 
         
 
@@ -370,20 +386,18 @@ class replica:
         #send the message to the clients to begin the game
         self.game_running = True
 
-        ####################### IMPORTANT #######################
-        # Current logic is the board is 2x the number of players
-        # Change below if we want logic to change
-        ####################### IMPORTANT #######################
-        size = int(len(self.client_list)) * 2
-        self.game_board = board.Board(size)
-        gamestate = self.game_board.get_full_gamestate()
-        
-        start = json.dumps({
-            "Type": "GameStart",
-            "Gamestate": gamestate
-        })
-        self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
-        self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
+        if self.local_ip == self.primary:
+            size = int(len(self.client_list)) * 2
+            
+            self.game_board = board.Board(size)
+            gamestate = self.game_board.get_full_gamestate()
+            
+            start = json.dumps({
+                "Type": "GameStart",
+                "Gamestate": gamestate
+            })
+                self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
+                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
 
     async def turn_cutoff(self):
         pass
@@ -575,6 +589,7 @@ class replica:
                             web.post('/ClientJoin', self.client_join),
                             web.post('/Ready', self.readied_up),
                             
+                            web.post("/ReadyConfirm", self.ready_confirm)
                             web.post('/StartViewChange', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
