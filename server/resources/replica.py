@@ -293,7 +293,7 @@ class replica:
                 self.n_operation = text["N_Operation"]
             if text["N_Commit"] > self.n_commit:
                 self.n_commit = text["N_Commit"]
-            if test["N_View"] > self.n_view:
+            if text["N_View"] > self.n_view:
                 self.start_state_transfer()
             self.game_board.player
             self.send_message(self.primary, "post", "PlayerMoveOK", )
@@ -412,7 +412,8 @@ class replica:
                 self.game_board = response["GameBoard"]
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
-                if self.current_turn
+                # if self.current_turn
+                #TODO: fix
                 self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
