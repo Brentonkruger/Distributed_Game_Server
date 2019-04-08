@@ -359,9 +359,8 @@ class replica:
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
-        
-        if len(self.ready_up) == len(self.client_list):
-            self.start_game()
+        else:
+            self.send_message(self.primary, "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
         
     async def ready_confirm(self, request):
         msg = await request.json()
