@@ -66,6 +66,7 @@ class replica:
         self.primary_recovery_response = False
         self.game_running = False
         self.log = []
+        self.game_board = None
 
         #get Ip of the local computer
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -359,8 +360,9 @@ class replica:
         # Change below if we want logic to change
         ####################### IMPORTANT #######################
         size = int(len(self.client_list)) * 2
-        game_board = board.Board(size)
-        gamestate = game_board.get_full_gamestate()
+        self.game_board = board.Board(size)
+        self.game_board.assign_players(len(self.client_list))
+        gamestate = self.game_board.get_full_gamestate()
         for i in self.client_list:
             start = json.dumps({
                 "Type": "GameStart",
@@ -371,8 +373,7 @@ class replica:
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
-        #TODO: implement
-        pass
+        return self.game_board.complete_turn()
     
     async def receive_gamestate(self, request):
         #TODO: implement
