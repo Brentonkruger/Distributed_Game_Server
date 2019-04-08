@@ -297,6 +297,7 @@ class replica:
                 self.n_commit = text["N_Commit"]
             if text["N_View"] > self.n_view:
                 self.start_state_transfer()
+            #TODO:update with board apply from primary
             # self.game_board.player
             # self.send_message(self.primary, "post", "PlayerMoveOK", )
             
@@ -318,7 +319,9 @@ class replica:
                 #TODO: Run compute gamestate function
                 pass
         
-
+     async def turn_cutoff(self):
+        
+        pass
 
     async def client_join(self, request):
         #client has joined up
@@ -378,7 +381,6 @@ class replica:
             self.ready_list = [0 for i in self.ready_list]
             self.start_game()
 
-
         
 
     async def start_game(self):
@@ -396,11 +398,33 @@ class replica:
                 "Type": "GameStart",
                 "Gamestate": gamestate
             })
-                self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
-                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
+            self.replica_broadcast("post", "StartConfirm", start)
+            # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
+            # 
 
-    async def turn_cutoff(self):
-        pass
+    async def start_confirm(self,request):
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        cid = text["Client_ID"]
+        
+        self.ready_list[cid] += 1
+        can_start = True
+        for i in self.ready_list:
+            if i < len(self.other_replicas)/2:
+                can_start = False
+        if can_start:
+            self.ready_list = [0 for i in self.ready_list]
+            #TODO: load into gamestate
+            # self.gameboard = gamestate = text['Gamestate']
+            # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=)
+            self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
+        
+        
+
+   
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
@@ -589,7 +613,8 @@ class replica:
                             web.post('/ClientJoin', self.client_join),
                             web.post('/Ready', self.readied_up),
                             
-                            web.post("/ReadyConfirm", self.ready_confirm)
+                            web.post("/ReadyConfirm", self.ready_confirm),
+                            web.post('/StartConfirm', self.start_confirm),
                             web.post('/StartViewChange', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
