@@ -294,11 +294,9 @@ class replica:
                 self.n_commit = text["N_Commit"]
             if test["N_View"] > self.n_view:
                 self.start_state_transfer()
-            turnjson = self.game_board.complete_turn()
-
-            #update operation number
-            #update commit number
-            #if view number is different, go to state transfer mode
+            self.game_board.player
+            self.send_message(self.primary, "post", "PlayerMoveOK", )
+            
 
             return web.Response()
     
