@@ -271,6 +271,8 @@ class Board:
         
     def get_full_gamestate(self):
         returned_json = {}
+
+        returned_json["board_size"] = len(self.board[0])
         returned_json["turn"] = self.turn
         powerup_json = []
         for powerup_location in self.powerup_locations:
@@ -297,7 +299,7 @@ class Board:
         for player in player_list_copy.values():
             player_quals = {}
             player_quals["id"] = player.id
-            player_quals["current_location"] = player.current_location
+            player_quals["current_location"] = self.coord_converter(player.current_location[0], player.current_location[1])
             player_quals["power"] = player.power
             player_quals["intended_move"] = player.movement
             if player.dead:

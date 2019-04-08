@@ -334,7 +334,7 @@ class TestingBoard(unittest.TestCase):
 
         # Make a powerup where player with id 0 is going.
         self.brd.add_powerup(1,1)
-        self.brd.complete_turn()
+        print(self.brd.complete_turn())
 
         self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,1))
         self.assertEqual(self.brd.get_player_by_id(0).power, 1)
