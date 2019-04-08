@@ -14,39 +14,40 @@ mainServerIP = "-1"
 ################################################# ClIENT FUCNTIONS ###################################
 
 def getURL():
-	url = "http://" + mainServerIP + ":" + str(serverPort)
-	return url
+    url = "http://" + mainServerIP + ":" + str(serverPort)
+    return url
 
 def getPlayerURL(ip):
-	url = "http://" + str(ip) + ":" + str(clientPort)
-	return url
+    url = "http://" + str(ip) + ":" + str(clientPort)
+    return url
 
 #connects clients to the game
 @app.route("/ClientJoin", methods=["POST"])
 def ClientJoin():
-	global players
-	ip = request.remote_addr #store clients ip
-	joinMsg = request.get_json(force=True) #get message from client
-	joinResponse = requests.post(getURL(), json=joinMsg) #send message to server
-	#store client_id and ip
-	clientID = joinResponse.json()['Client_ID']
-	players.update({str(clientID): str(ip)})
-	print(players)
-	return jsonify(joinResponse.json()) #send response back to client
+    global players
+    ip = request.remote_addr #store clients ip
+    joinMsg = request.get_json(force=True) #get message from client
+    joinResponse = requests.post(getURL() + "/ClientJoin", json=joinMsg) #send message to server
+    #store client_id and ip
+    body = joinResponse.json()
+    clientID = body['Client_ID']
+    players.update({str(clientID): str(ip)})
+    print(players)
+    return jsonify(joinResponse.json()) #send response back to client
 
 #forwards moves from the client to the main server
 @app.route("/PlayerMovement", methods=['POST'])
 def PlayerMovement():
-	moves = request.get_json(force=True)
-	response = requests.post(getURL(), json=moves) 
-	return response.content
+    moves = request.get_json(force=True)
+    response = requests.post(getURL(), json=moves) 
+    return response.content
 
 #tells server player is ready
 @app.route("/Ready", methods=["POST"])
 def Ready():
-	readyMsg = request.get_json(force=True)
-	readyResponse = requests.post(getURL(), json=readyMsg)
-	return readyResponse.content
+    readyMsg = request.get_json(force=True)
+    readyResponse = requests.post(getURL() + "/Ready", json=readyMsg)
+    return readyResponse.content
 
 
 ################################################# SERVER FUCNTIONS ###################################
@@ -54,19 +55,19 @@ def Ready():
 #recieves updated main server ip from a server
 @app.route("/NewPrimary", methods=['POST'])
 def NewPrimary():
-	global mainServerIP
-	ip = request.get_json('IP')
-	mainServerIP = str(ip['IP'])
-	print (mainServerIP)
-	return 'ok'
+    global mainServerIP
+    ip = request.get_json('IP')
+    mainServerIP = str(ip['IP'])
+    print (mainServerIP)
+    return 'ok'
 
 #forwards game state from main server to all clients
 @app.route("/GameUpdate", methods=['POST'])
 def GameUpdate():
-	gameState = request.get_json(force=True)
-	for ip in players:
-		requests.post(getPlayerURL(players[ip]), json=gameState)
-	return 'ok'
+    gameState = request.get_json(force=True)
+    for ip in players:
+        requests.post(getPlayerURL(players[ip]), json=gameState)
+    return 'ok'
 
 #returns the main server ip
 #	-if no main server yet, sets the requesting server to the main server and returns the same servers address
