@@ -336,6 +336,7 @@ class replica:
                     "Type": "ClientJoinOK",
                     "Client_ID": self.client_list[request.remote],
                     "N_Request": text['N_Request']})
+                    
                 return web.Response(body = resp)
             else:
                 return web.Response()
@@ -360,6 +361,7 @@ class replica:
         
         if len(self.ready_up) == len(self.client_list):
             self.start_game()
+        
 
         
 
