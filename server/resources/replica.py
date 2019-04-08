@@ -205,6 +205,9 @@ class replica:
 
                 # Broadcast message to other replicas
                 self.replica_broadcast("post", "StartView", startview_message)
+                msg = json.dumps({"Type": "New_Primary",
+                    "IP": self.local_ip})
+                self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
                 self.timer.start(7, self.send_commit)
 
     async def send_commit(self):
@@ -218,7 +221,7 @@ class replica:
             await self.send_message(str(rep),req_type, req_location, msg)
 
     async def request_primary_ip(self):
-        # start up the game, and get the current state of the game. Run recovery if necessary.
+        # start up the game, and get the current state of the game.
         resp = await self.session.get("http://" + self.routing_layer + ":5000/join")
         txt = await resp.text()
         a_resp = json.loads(txt)
@@ -229,14 +232,8 @@ class replica:
 
             #connect to primary and ask for updated replica list
             msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
-            resp = await self.send_message(self.primary, "get", "GetReplicaList", msg)
-            txt = json.loads(await resp.text())
-
+            await self.send_message(self.primary, "get", "GetReplicaList", msg)
             
-
-            #start the heartbeat expectiation from the primary.
-            self.timer = Timer(10, self.send_view_change, self.loop)
-            self.timer.start(10, self.send_view_change)
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
             self.timer = Timer(7, self.send_commit, self.loop)
@@ -513,14 +510,20 @@ class replica:
                     print("Added\t" + request.remote)
                 if request.remote not in self.other_replicas:
                     self.other_replicas.append(request.remote)
-            body = json.dumps({"Type": "UpdateReplicaList", "Replica_List": [i for i in self.all_replicas], })
+            body = json.dumps({
+                "Type": "UpdateReplicaList", 
+                "Replica_List": [i for i in self.all_replicas], 
+                "N_Commit": self.n_commit,
+                "N_Operation": self.n_operation,
+                "N_View": self.n_view})
             await self.replica_broadcast("post", "UpdateReplicaList", body)
+            
             return web.Response()
         else: 
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
 
     async def update_replicas(self, request):
-        if self.local_ip == self.primary:
+        if self.local_ip != self.primary:
             body = await request.json()
             txt = json.loads(body)
             newList = txt["Replica_List"]
@@ -529,11 +532,15 @@ class replica:
                     self.all_replicas.append(i)
                 if i not in self.other_replicas and i != self.local_ip:
                     self.other_replicas.append(i)
-            if txt['N_Commit']> self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View']> self.n_view:
+            if txt['N_Commit'] > self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View'] > self.n_view:
                 self.start_recovery()
+
+            #start the heartbeat expectiation from the primary.
+            self.timer = Timer(10, self.send_view_change, self.loop)
+            self.timer.start(10, self.send_view_change)
             return web.Response()
         else: 
-            return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
+            return web.Response(status = 400)
 
     # This starts the http server and listens for the specified http requests
     async def http_server_start(self):
