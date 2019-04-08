@@ -295,8 +295,8 @@ class replica:
                 self.n_commit = text["N_Commit"]
             if text["N_View"] > self.n_view:
                 self.start_state_transfer()
-            self.game_board.player
-            self.send_message(self.primary, "post", "PlayerMoveOK", )
+            # self.game_board.player
+            # self.send_message(self.primary, "post", "PlayerMoveOK", )
             
 
             return web.Response()
