@@ -62,6 +62,7 @@ class replica:
         self.operation_list = []
         self.n_operation = 0
         self.n_recovery_messages = 0
+        self.start_count = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
         self.n_gamestate_responses = 0
@@ -420,20 +421,25 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        cid = text["Client_ID"]
+        # cid = text["Client_ID"]
         
-        self.ready_list[cid] += 1
-        can_start = True
-        for i in self.ready_list:
-            if i < len(self.other_replicas)/2:
-                can_start = False
-        if can_start:
-            self.ready_list = [0 for i in self.ready_list]
-            #TODO: load into gamestate
-            self.game_board.recieve_game_state(text["GameState"])
-            self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
-        
-        
+        if self.local_ip != self.primary:
+            can_start = True
+            for i in self.ready_list:
+                if i < len(self.other_replicas)/2:
+                    can_start = False
+            if can_start:
+                self.ready_list = [0 for i in self.ready_list]
+                #TODO: load into gamestate
+                self.game_board.recieve_game_state(text["GameState"])
+                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
+            #respond with startconfirm to server
+            await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
+        else:
+            self.start_count += 1
+            if self.start_count >= len(self.other_replicas)/2:
+                msg = json.dumps({"Type:": "GameUpdate", "GameState":text['GameState']})
+                self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
    
 
