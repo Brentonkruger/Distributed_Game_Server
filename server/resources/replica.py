@@ -302,9 +302,9 @@ class replica:
                 self.start_state_transfer()
             #TODO:update with board apply from primary
             # self.game_board.player
-            # self.send_message(self.primary, "post", "PlayerMoveOK", )
             self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
-            
+            self.send_message(self.primary, "post", "PlayerMoveOK", text)
+
             self.timer.start()
             return web.Response()
     
@@ -321,7 +321,9 @@ class replica:
 
                 #request has quorum.
                 #TODO: Run compute gamestate function
-                pass
+                self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
+        
+
             threshold = len(self.other_replicas)/2
             i = self.n_commit
             lower_found = True
@@ -333,8 +335,9 @@ class replica:
                     lower_found = False
         
     async def turn_cutoff(self):
-        
-        pass
+        if self.local_ip == self.primary:
+            self.game_board.complete_turn()
+
 
     async def client_join(self, request):
         #client has joined up
@@ -449,7 +452,7 @@ class replica:
                     })
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
-   
+
 
     async def compute_gamestate(self, request):
         #compute gamestate and return message
@@ -458,12 +461,13 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
+            
             update = json.dumps({
                 "Type": "GameState",
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
-                "GameBoard": self.game_board
+                "GameBoard": self.game_board.complete_turn()
             })
             self.send_message(self.primary, "post", "GameState", update)
             return web.Response()
@@ -475,7 +479,6 @@ class replica:
             response = json.loads(update)
             if response["Type"] == "GameState":
                 self.n_gamestate_responses += 1
-                self.game_board = response["GameBoard"]
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
                 # if self.current_turn
@@ -483,9 +486,10 @@ class replica:
                 self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
+                self.game_board = self.game_board.recieve_game_state(response["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
-                    "Gamestate": self.game_board.complete_turn()
+                    "Gamestate": self.game_board.get_full_gamestate()
                 })
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 self.turn_timer.start()
