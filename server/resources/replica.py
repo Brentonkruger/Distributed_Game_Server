@@ -238,7 +238,7 @@ class replica:
 
             #connect to primary and ask for updated replica list
             msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
-            await self.send_message(self.primary, "get", "GetReplicaList", msg)
+            await self.send_message(self.primary, "post", "GetReplicaList", msg)
             
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
@@ -324,7 +324,7 @@ class replica:
                 #request has quorum.
                 #TODO: Run compute gamestate function
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
-                await self.send_message(self.other_replicas[0], "post", "ComputeGamestate", json.dumps(text))    
+                await self.replica_broadcast("post", "ComputeGamestate", json.dumps(text))    
                 
 
             threshold = len(self.other_replicas)/2
@@ -540,7 +540,7 @@ class replica:
             "N_Replica":self.local_ip
         }
         tmp_list = self.other_replicas
-        resp = await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
+        resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
         #update state
         txt = json.loads(await resp.text())
         self.n_view = txt['N_View']
@@ -656,10 +656,10 @@ class replica:
                             web.post('/GetState', self.get_state),
                             web.post('/Commit', self.apply_commit),
                             web.post('/PlayerMoveOK', self.player_move_ok),
-                            web.get('/GetReplicaList', self.replica_list),
+                            web.post('/GetReplicaList', self.replica_list),
                             web.post('/UpdateReplicaList', self.update_replicas),
-                            web.get('/ComputeGamestate', self.compute_gamestate),
-                            web.get('/Gamestate', self.receive_gamestate)])
+                            web.post('/ComputeGamestate', self.compute_gamestate),
+                            web.post('/Gamestate', self.receive_gamestate)])
         self.runner = aiohttp.web.AppRunner(self.app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.local_ip, 9999)
