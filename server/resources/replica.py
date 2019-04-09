@@ -54,7 +54,7 @@ class replica:
         self.client_list = {}
         self.client_requests = list(list())
         self.request_ok = []
-        self.ready_list = []
+        self.ready_list = {}
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
