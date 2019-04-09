@@ -403,8 +403,9 @@ class replica:
 
         if self.local_ip == self.primary:
             size = int(len(self.client_list)) * 2
-            
+
             self.game_board = board.Board(size)
+            self.game_board.assign_players(len(self.client_list))
             gamestate = self.game_board.get_full_gamestate()
             
             start = json.dumps({
@@ -441,7 +442,7 @@ class replica:
             if self.start_count >= len(self.other_replicas)/2:
                 msg = json.dumps({
                     "Type": "GameUpdate", 
-                    "GameState": text['GameState']
+                    "GameState": text
                     })
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
