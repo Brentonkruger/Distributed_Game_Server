@@ -304,7 +304,7 @@ class replica:
                 self.start_state_transfer()
             #TODO:update with board apply from primary
             # self.game_board.player
-            self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"][0])
+            self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
             await self.send_message(self.primary, "post", "PlayerMoveOK", json.dumps(text))
 
             self.timer.start()
@@ -323,7 +323,7 @@ class replica:
 
                 #request has quorum.
                 #TODO: Run compute gamestate function
-                self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
+                self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
                 board = self.game_board.complete_turn()
                 await self.replica_broadcast("post", "ComputeGamestate", board)    
                 
