@@ -1,7 +1,7 @@
 # This class is for a player instance on the server
 class Player:
     def __init__(self, id):
-        self.power = 0
+        self.power = 100
         self.movement = []
         self.id = id
         self.dead = False
