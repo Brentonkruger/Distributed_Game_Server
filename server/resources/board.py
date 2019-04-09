@@ -371,7 +371,11 @@ class Board:
             
             self.player_list[player_id].power = player["power"]
             self.player_list[player_id].inteneded_move = player["intended_move"]
-            self.player_list[player_id].dead = player["dead"]
+            if player["dead"]  == "true":
+                self.player_list[player_id].dead = "true"
+
+            if player["dead"]  == "false":
+                self.player_list[player_id].dead = "false"
 
                 
 
