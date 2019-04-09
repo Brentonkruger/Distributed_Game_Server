@@ -387,7 +387,7 @@ class replica:
         self.ready_list[cid] += 1
         can_start = True
         for i in self.ready_list:
-            if i < len(self.other_replicas)/2:
+            if i >= len(self.other_replicas)/2:
                 can_start = False
         if can_start:
             self.ready_list = [0 for i in self.ready_list]
