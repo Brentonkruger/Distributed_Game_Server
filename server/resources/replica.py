@@ -481,7 +481,7 @@ class replica:
                 "N_Commit": self.n_commit,
                 "GameBoard": self.game_board.recieve_game_state(json.dumps(text))
             })
-            await self.send_message(self.primary, "post", "GameState", update)
+            await self.send_message(self.primary, "post", "Gamestate", update)
             return web.Response()
     
     async def receive_gamestate(self, request):
