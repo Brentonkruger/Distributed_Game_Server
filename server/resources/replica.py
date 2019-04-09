@@ -303,6 +303,7 @@ class replica:
             #TODO:update with board apply from primary
             # self.game_board.player
             # self.send_message(self.primary, "post", "PlayerMoveOK", )
+            self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
             
             self.timer.start()
             return web.Response()
