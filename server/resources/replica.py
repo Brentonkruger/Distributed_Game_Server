@@ -407,7 +407,8 @@ class replica:
             if i < len(self.other_replicas)/2:
                 can_start = False
         if can_start:
-            self.ready_list = [0 for i in self.ready_list]
+            for key, val in self.ready_list.items():
+                self.ready_list[key] = 0
             await self.start_game()
   
 
@@ -443,11 +444,12 @@ class replica:
         
         if self.local_ip != self.primary:
             can_start = True
-            for i in self.ready_list:
+            for i in self.ready_list.values():
                 if i < len(self.other_replicas)/2:
                     can_start = False
             if can_start:
-                self.ready_list = [0 for i in self.ready_list]
+                for key, val in self.ready_list.items():
+                    self.ready_list[key] = 0
                 #TODO: load into gamestate
                 self.game_board = board.Board(1)
                 self.game_board.recieve_game_state(text["GameState"])
