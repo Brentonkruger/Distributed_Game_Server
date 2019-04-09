@@ -569,7 +569,7 @@ class replica:
             if self.primary == self.local_ip:
                 #return the intense answer
                 reply = json.dumps({
-                    "Type": "RecoverResponse",
+                    "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": txt['Nonce'],
                     "Log": [i for i in self.log],
