@@ -13,6 +13,10 @@ class TestingBoard(unittest.TestCase):
         # Initialize game size
         self.brd = board.Board(10)
         
+        self.brd.assign_players(2)
+
+        self.brd.get_full_gamestate()
+
         # Ensure that the two corners are both stable, and the stable_locations set is equal to 100
         self.assertEqual(self.brd.check_block_state(0,0), board.BlockState.STABLE)
         self.assertEqual(self.brd.check_block_state(9,9), board.BlockState.STABLE)
@@ -334,7 +338,8 @@ class TestingBoard(unittest.TestCase):
 
         # Make a powerup where player with id 0 is going.
         self.brd.add_powerup(1,1)
-        print(self.brd.complete_turn())
+        
+        self.brd.complete_turn()
 
         self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,1))
         self.assertEqual(self.brd.get_player_by_id(0).power, 1)
@@ -344,10 +349,25 @@ class TestingBoard(unittest.TestCase):
         self.assertFalse(1 in self.brd.player_list)
 
         # Two new cracked locations were spawned, and one location was turned into a hole!
-        self.assertEqual(len(self.brd.cracked_locations), 2)        
+        self.assertEqual(len(self.brd.cracked_locations), 2)
 
+    def test_recieve_game_state(self):
+        self.brd = board.Board(1)
+        
+        json_string = '{"board_size": 3, "turn": 1, "powerup_locations": [{"x": 0, "y": 2}], "cracked_locations": [{"x": 1, "y": 2}, {"x": 2, "y": 2}], "stable_locations": [{"x": 0, "y": 2}, {"x": 1, "y": 0}, {"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 0}, {"x": 0, "y": 1}], "hole_locations": [{"x": 2, "y": 1}], "player_list": [{"id": 0, "current_location": {"x": 1, "y": 1}, "power": 1, "intended_move": ["L"], "dead": "false"}, {"id": 1, "current_location": {"x": 2, "y": 1}, "power": 0, "intended_move": ["U"], "dead": "true"}]}'
 
-        self.brd.complete_turn()
+        self.brd.recieve_game_state(json_string)
+
+        self.assertEqual(self.brd.get_player_by_id(0).current_location, (1,1))
+        self.assertEqual(self.brd.get_player_by_id(0).power, 1)
+
+        # 1 because one was picked up, and one was spawned.
+        self.assertEqual(len(self.brd.powerup_locations), 1)
+
+        # Two new cracked locations were spawned, and one location was turned into a hole!
+        self.assertEqual(len(self.brd.cracked_locations), 2)
+        
+
 
 
 if __name__ == '__main__':

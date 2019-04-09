@@ -37,6 +37,7 @@ class Board:
                 self.stable_locations.add((i,j))
         self.board = [[Block() for x in range(size)] for y in range(size)]
         
+    
     def print_board(self):
         string = ""
         for i in range(len(self.board)):
@@ -313,10 +314,64 @@ class Board:
 
         returned_json["player_list"] = player_json
 
-        return(returned_json)
+        return(json.dumps(returned_json))
 
     def coord_converter(self, x, y):
         new_coord = {}
         new_coord["x"] = y
         new_coord["y"] = len(self.board[0]) - (x + 1) 
         return new_coord
+
+    def coord_unconverter(self, x, y):
+        normal_tup = ((len(self.board[0]) - (x + 1)), x)
+        return normal_tup
+
+    def recieve_game_state(self, json_string):
+        # self.size = game_state_json["board_size"] = len(self.board[0])
+        game_state_json = json.loads(json_string)
+    
+        self.board = [[Block() for x in range(game_state_json["board_size"])] for y in range(game_state_json["board_size"])]
+
+        self.turn = game_state_json["turn"]
+        powerup_list = []
+        for powerup_location in game_state_json["powerup_locations"]:
+            coord = self.coord_unconverter(powerup_location['x'], powerup_location['y'])
+            self.board[coord[0]][coord[1]].has_powerup = True
+            powerup_list.append(coord)
+        self.powerup_locations = powerup_list
+
+        cracked_list = []
+        for cracked_location in game_state_json["cracked_locations"]:
+            coord = self.coord_unconverter(cracked_location['x'], cracked_location['y'])
+            self.board[coord[0]][coord[1]].block_state = BlockState.CRACKED
+            cracked_list.append(coord)
+        self.cracked_locations = cracked_list
+
+        stable_list = []
+        for stable_location in game_state_json["stable_locations"]:
+            coord = self.coord_unconverter(stable_location['x'], stable_location['y'])
+            stable_list.append(coord)
+        self.stable_locations = stable_list
+
+        hole_list = []
+        for hole_location in game_state_json["hole_locations"]:
+            coord = self.coord_unconverter(hole_location['y'], hole_location['y'])
+            self.board[coord[0]][coord[1]].block_state = BlockState.HOLE
+            hole_list.append(coord)
+        self.hole_locations = hole_list
+
+        for player in game_state_json["player_list"]:
+            player_id = player["id"]
+            if player_id in self.player_list:
+                self.player_list[player_id].current_location = self.coord_unconverter(player["current_location"]["x"], player["current_location"]["y"])
+            else:
+                new_coord = self.coord_unconverter(player["current_location"]["x"], player["current_location"]["y"])
+                self.assign_player_with_location(player_id, new_coord[0], new_coord[1])
+            
+            self.player_list[player_id].power = player["power"]
+            self.player_list[player_id].inteneded_move = player["intended_move"]
+            self.player_list[player_id].dead = player["dead"]
+
+                
+
+
