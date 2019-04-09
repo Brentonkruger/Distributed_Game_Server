@@ -155,7 +155,7 @@ class replica:
                 message = json.dumps({
                     "N_View": self.n_view,
                     "N_replica": self.local_ip})
-                self.replica_broadcast("post", "StartViewChange", message)
+                await self.replica_broadcast("post", "StartViewChange", message)
                 self.start_view_change_sent = True
             self.n_start_view_change_messages += 1
             
@@ -172,7 +172,7 @@ class replica:
             # Send DoViewChange to new primary
             self.primary = self.get_new_primary_replica(self.primary)
             print("View change started")
-            self.send_message(self.primary, "post", "DoViewChange", msg)
+            await self.send_message(self.primary, "post", "DoViewChange", msg)
         return web.Response()
 
     async def send_view_change(self):
@@ -183,7 +183,7 @@ class replica:
         message = json.dumps({
             "N_View": self.n_view,
             "N_replica": self.local_ip})
-        self.replica_broadcast("post", "StartViewChange", message)
+        await self.replica_broadcast("post", "StartViewChange", message)
         self.start_view_change_sent = True
 
 
@@ -212,10 +212,10 @@ class replica:
                 })
 
                 # Broadcast message to other replicas
-                self.replica_broadcast("post", "StartView", startview_message)
+                await self.replica_broadcast("post", "StartView", startview_message)
                 msg = json.dumps({"Type": "New_Primary",
                     "IP": self.local_ip})
-                self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
+                await self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
                 self.timer.start(7, self.send_commit)
 
     async def send_commit(self):
