@@ -374,6 +374,7 @@ class replica:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
         else:
             await self.send_message(self.primary, "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
+        return web.Response()
         
     async def ready_confirm(self, request):
         msg = await request.json()
