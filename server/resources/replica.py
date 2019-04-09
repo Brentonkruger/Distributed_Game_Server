@@ -324,7 +324,8 @@ class replica:
                 #request has quorum.
                 #TODO: Run compute gamestate function
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
-                await self.replica_broadcast("post", "ComputeGamestate", json.dumps({}))    
+                await self.replica_broadcast("post", "ComputeGamestate", json.dumps(text))    
+                
 
             threshold = len(self.other_replicas)/2
             i = self.n_commit
