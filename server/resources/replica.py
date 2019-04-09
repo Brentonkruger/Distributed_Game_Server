@@ -503,7 +503,7 @@ class replica:
                 self.game_board.recieve_game_state(text["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
-                    "Gamestate": json.loads(self.game_board.get_full_gamestate())
+                    "GameState": json.loads(self.game_board.get_full_gamestate())
                 })
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 # self.turn_timer.start()
