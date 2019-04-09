@@ -391,7 +391,7 @@ class replica:
                 can_start = False
         if can_start:
             self.ready_list = [0 for i in self.ready_list]
-            self.start_game()
+            await self.start_game()
 
         
 
