@@ -52,7 +52,7 @@ class replica:
         self.all_replicas = []
         self.ready_up = []
         self.client_list = {}
-        self.client_requests = list(list())
+        self.client_requests = {}
         self.request_ok = []
         self.ready_list = {}
         self.message_out_queue = asyncio.Queue()
@@ -266,7 +266,8 @@ class replica:
             text = json.loads(msg)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            op_id = self.client_requests[text['Client_ID']][text['Client_ID']]
+            op_id = text['N_Operation']
+            self.client_requests[text['Client_ID']].append(text[op_id])
             if op_id <= self.n_commit:
                 msg = json.dumps({
                     "Type": "GameUpdate",
@@ -399,6 +400,8 @@ class replica:
         #finalize the servers on game start
         #send the message to the clients to begin the game
         self.game_running = True
+        for index in range(len(self.client_list)):
+            self.client_requests[index] = []
 
         if self.local_ip == self.primary:
             size = int(len(self.client_list)) * 2
