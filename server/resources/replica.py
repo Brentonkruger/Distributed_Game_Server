@@ -439,14 +439,10 @@ class replica:
         else:
             self.start_count += 1
             if self.start_count >= len(self.other_replicas)/2:
-<<<<<<< HEAD
-                msg = json.dumps({"Type": "GameUpdate", "GameState":text['GameState']})
-=======
                 msg = json.dumps({
                     "Type": "GameUpdate", 
                     "GameState": text['GameState']
                     })
->>>>>>> 164f902176412b86ddc5dcb0c0a0995e36d96a2b
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
    
