@@ -352,8 +352,8 @@ class replica:
         #client has joined up
         #check for a running game
         if not self.game_running:
-            if request.remote not in self.client_list:
-                self.client_list[request.remote] = len(self.client_list)
+            if text["Client_IP"] not in self.client_list:
+                self.client_list[text["Client_IP"]] = len(self.client_list)
                 print("added client")
             if self.local_ip == self.primary:
                 msg = await request.json()
@@ -361,10 +361,10 @@ class replica:
                     text = msg
                 else:
                     text = json.loads(msg)
-                self.ready_list[self.client_list[request.remote]] = 0
+                self.ready_list[self.client_list[text["Client_IP"]]] = 0
                 resp = json.dumps({
                     "Type": "ClientJoinOK",
-                    "Client_ID": self.client_list[request.remote],
+                    "Client_ID": self.client_list[text["Client_IP"]],
                     "N_Request": text['N_Request']})
                     
                 return web.Response(body = resp)
