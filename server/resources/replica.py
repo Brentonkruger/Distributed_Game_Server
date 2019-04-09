@@ -497,16 +497,16 @@ class replica:
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
                 # if self.current_turn
                 #TODO: fix
-                self.turn_timer.cancel()
+                # self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
-                self.game_board = self.game_board.recieve_game_state(text["GameBoard"])
+                self.game_board.recieve_game_state(text["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "Gamestate": self.game_board.get_full_gamestate()
                 })
                 self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
-                self.turn_timer.start()
+                # self.turn_timer.start()
 
         # If not primary, send address of primary to replica
         else:
