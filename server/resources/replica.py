@@ -431,6 +431,7 @@ class replica:
             if can_start:
                 self.ready_list = [0 for i in self.ready_list]
                 #TODO: load into gamestate
+                self.game_board = board.Board(text["GameState"]["board_size"])
                 self.game_board.recieve_game_state(text["GameState"])
                 self.turn_timer = Timer(3000000, self.turn_cutoff, self.loop)
             #respond with startconfirm to server
