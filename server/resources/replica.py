@@ -393,8 +393,7 @@ class replica:
         if can_start:
             self.ready_list = [0 for i in self.ready_list]
             await self.start_game()
-
-        
+  
 
     async def start_game(self):
         #finalize the servers on game start
@@ -444,7 +443,7 @@ class replica:
                     "Type": "GameUpdate", 
                     "GameState": text
                     })
-                self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
+                await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
    
 
