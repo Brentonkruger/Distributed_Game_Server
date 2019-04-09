@@ -401,7 +401,7 @@ class replica:
         cid = text["Client_ID"]
         self.ready_list[cid] += 1
         can_start = True
-        for i in self.ready_list:
+        for i in self.ready_list.values():
             if i < len(self.other_replicas)/2:
                 can_start = False
         if can_start:
