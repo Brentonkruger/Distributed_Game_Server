@@ -410,7 +410,7 @@ class replica:
                 "Type": "GameStart",
                 "Gamestate": gamestate
             })
-            self.replica_broadcast("post", "StartConfirm", start)
+            await self.replica_broadcast("post", "StartConfirm", start)
             # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
             # 
 
