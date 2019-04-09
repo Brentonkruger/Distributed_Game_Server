@@ -323,7 +323,7 @@ class Board:
         return new_coord
 
     def coord_unconverter(self, x, y):
-        normal_tup = ((len(self.board[0]) - (x + 1)), x)
+        normal_tup = ((len(self.board[0]) - (y + 1)), x)
         return normal_tup
 
     def recieve_game_state(self, json_string):
@@ -333,6 +333,7 @@ class Board:
         self.board = [[Block() for x in range(game_state_json["board_size"])] for y in range(game_state_json["board_size"])]
 
         self.turn = game_state_json["turn"]
+
         powerup_list = []
         for powerup_location in game_state_json["powerup_locations"]:
             coord = self.coord_unconverter(powerup_location['x'], powerup_location['y'])
