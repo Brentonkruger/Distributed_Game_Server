@@ -304,7 +304,7 @@ class replica:
                 self.start_state_transfer()
             #TODO:update with board apply from primary
             # self.game_board.player
-            self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
+            self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"][0])
             await self.send_message(self.primary, "post", "PlayerMoveOK", json.dumps(text))
 
             self.timer.start()
@@ -503,7 +503,7 @@ class replica:
                 self.game_board.recieve_game_state(text["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
-                    "Gamestate": self.game_board.get_full_gamestate()
+                    "Gamestate": json.loads(self.game_board.get_full_gamestate())
                 })
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 # self.turn_timer.start()
