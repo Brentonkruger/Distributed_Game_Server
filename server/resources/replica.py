@@ -53,7 +53,7 @@ class replica:
         self.ready_up = []
         self.client_list = {}
         self.client_requests = {}
-        self.request_ok = []
+        self.request_ok = {}
         self.ready_list = {}
         self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
@@ -287,6 +287,8 @@ class replica:
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
                 "N_View": self.n_view})
+
+            self.request_ok[self.n_operation] = 0
             await self.replica_broadcast("post", "PlayerMovement", msg)
             self.timer.start()
             return web.Response()
