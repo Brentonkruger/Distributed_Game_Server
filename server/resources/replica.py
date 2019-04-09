@@ -430,8 +430,7 @@ class replica:
         if can_start:
             self.ready_list = [0 for i in self.ready_list]
             #TODO: load into gamestate
-            # self.gameboard = gamestate = text['Gamestate']
-            # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=)
+            self.game_board.recieve_game_state(text["GameState"])
             self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
         
         

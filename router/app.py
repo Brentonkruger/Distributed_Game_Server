@@ -39,7 +39,7 @@ def ClientJoin():
 @app.route("/PlayerMovement", methods=['POST'])
 def PlayerMovement():
     moves = request.get_json(force=True)
-    response = requests.post(getURL(), json=moves) 
+    response = requests.post(getURL() + "/PlayerMovement", json=moves) 
     return response.content
 
 #tells server player is ready
