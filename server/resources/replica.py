@@ -412,7 +412,7 @@ class replica:
             self.client_requests[index] = []
 
         if self.local_ip == self.primary:
-            size = int(len(self.client_list)) * 2
+            size = int(len(self.client_list)) * 4
 
             self.game_board = board.Board(size)
             self.game_board.assign_players(len(self.client_list))
