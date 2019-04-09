@@ -448,7 +448,6 @@ class replica:
                 #TODO: load into gamestate
                 self.game_board = board.Board(1)
                 self.game_board.recieve_game_state(text["GameState"])
-                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
             #respond with startconfirm to server
             await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
         else:
@@ -458,6 +457,7 @@ class replica:
                     "Type": "GameUpdate", 
                     "GameState": text
                     })
+                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
 
 
