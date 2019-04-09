@@ -11,11 +11,20 @@ class TestingRecovery (unittest.TestCase):
     # call function to get next 
 
     # Testing recovery message broadcast
-    def test_recovery_broadcast(self):
+    async def test_recovery_broadcast(self):
+        self.rep = replica.replica("127.0.0.1")
+        self.rep.start_recovery()
         return False
 
     # Testing recovery response
-    def test_recovery_response(self):
+    async def test_recovery_help(self):
+        self.rep = replica.replica("127.0.0.1")
+        self.rep.recovery_help()
+        return False
+
+    async def test_recovery_response(self):
+        self.rep = replica.replica("127.0.0.1")
+        self.rep.recovery_response()
         return False
 
 if __name__ == '__main__':

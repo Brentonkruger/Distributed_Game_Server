@@ -7,7 +7,7 @@ import json
 from aiohttp import web
 import aiohttp
 import random
-import board
+from . import board
 
 class Mode(Enum):
     BACKUP = 0
@@ -78,7 +78,7 @@ class replica:
         self.loop = asyncio.get_event_loop()
 
         self.loop.create_task(self.http_server_start())
-        self.loop.create_task(self.request_primary_ip())
+        #self.loop.create_task(self.request_primary_ip())
 
         try:
             self.loop.run_forever()
