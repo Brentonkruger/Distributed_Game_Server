@@ -324,7 +324,8 @@ class replica:
                 #request has quorum.
                 #TODO: Run compute gamestate function
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement([text["Operation"]])
-                await self.replica_broadcast("post", "ComputeGamestate", json.dumps(text))    
+                board = self.game_board.complete_turn()
+                await self.replica_broadcast("post", "ComputeGamestate", board)    
                 
 
             threshold = len(self.other_replicas)/2
@@ -460,17 +461,25 @@ class replica:
     async def compute_gamestate(self, request):
         #compute gamestate and return message
         # If primary, send bad response
+
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+
         if self.primary == self.local_ip:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
+
             
             update = json.dumps({
                 "Type": "GameState",
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
-                "GameBoard": self.game_board.complete_turn()
+                "GameBoard": self.game_board.recieve_game_state(text)
             })
             await self.send_message(self.primary, "post", "GameState", update)
             return web.Response()
