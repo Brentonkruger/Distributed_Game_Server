@@ -605,8 +605,11 @@ class replica:
 
     async def update_replicas(self, request):
         if self.local_ip != self.primary:
-            body = await request.json()
-            txt = json.loads(body)
+            msg = await request.json()
+            if type(msg) == dict:
+                txt = msg
+            else:
+                txt= json.loads(msg)
             newList = txt["Replica_List"]
             for i in newList:
                 if i not in self.all_replicas:
