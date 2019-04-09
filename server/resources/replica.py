@@ -324,10 +324,7 @@ class replica:
                 #request has quorum.
                 #TODO: Run compute gamestate function
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
-                board = self.game_board.complete_turn()
-                await self.replica_broadcast("post", "ComputeGamestate", board)    
-                
-
+   
             threshold = len(self.other_replicas)/2
             i = self.n_commit
             lower_found = True
@@ -339,8 +336,10 @@ class replica:
                     lower_found = False
         
     async def turn_cutoff(self):
+        self.current_turn += 1
         if self.local_ip == self.primary:
-            self.game_board.complete_turn()
+            board = self.game_board.complete_turn()
+            await self.replica_broadcast("post", "ComputeGamestate", board) 
 
 
     async def client_join(self, request):
@@ -449,7 +448,7 @@ class replica:
                 #TODO: load into gamestate
                 self.game_board = board.Board(1)
                 self.game_board.recieve_game_state(text["GameState"])
-                self.turn_timer = Timer(3000000, self.turn_cutoff, self.loop)
+                self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
             #respond with startconfirm to server
             await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
         else:
@@ -511,8 +510,9 @@ class replica:
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
                 })
+                
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
-                # self.turn_timer.start()
+                self.turn_timer.start()
 
         # If not primary, send address of primary to replica
         else:
