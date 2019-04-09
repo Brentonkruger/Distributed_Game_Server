@@ -303,7 +303,7 @@ class Board:
             player_quals["current_location"] = self.coord_converter(player.current_location[0], player.current_location[1])
             player_quals["power"] = player.power
             player_quals["intended_move"] = player.movement
-            if player.dead:
+            if player.dead == "true" or player.dead:
                 player_quals["dead"] = "true"
                 del self.player_list[player.id]
             else:
