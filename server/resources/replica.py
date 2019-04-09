@@ -292,7 +292,6 @@ class replica:
         #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
             self.timer.cancel()
-            #TODO:apply update to gamestate
             if text["N_Operation"] > self.n_operation:
                 self.n_operation = text["N_Operation"]
             if text["N_Commit"] > self.n_commit:
