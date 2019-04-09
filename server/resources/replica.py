@@ -505,7 +505,7 @@ class replica:
                     "Type": "GameUpdate",
                     "Gamestate": self.game_board.get_full_gamestate()
                 })
-                self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
+                await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 # self.turn_timer.start()
 
         # If not primary, send address of primary to replica
