@@ -245,8 +245,8 @@ class replica:
             
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
-            self.timer = Timer(300000, self.send_commit, self.loop)
-            self.timer.start(3000000, self.send_commit)
+            self.timer = Timer(7, self.send_commit, self.loop)
+            self.timer.start(7, self.send_commit)
 
     async def get_new_primary_replica(self, old_ip):
         index = self.all_replicas.index(old_ip)
@@ -654,8 +654,8 @@ class replica:
                 self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
-            self.timer = Timer(3000000, self.send_view_change, self.loop)
-            self.timer.start(3000000, self.send_view_change)
+            self.timer = Timer(8, self.send_view_change, self.loop)
+            self.timer.start(8, self.send_view_change)
             return web.Response()
         else: 
             return web.Response(status = 400)
