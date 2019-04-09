@@ -59,6 +59,7 @@ class replica:
         self.routing_layer = routing_ip
         self.n_view = 0
         self.n_commit = 0
+        self.operation_list = []
         self.n_operation = 0
         self.n_recovery_messages = 0
         self.n_start_view_change_messages = 0
@@ -257,7 +258,6 @@ class replica:
 
     async def player_move(self, request):
         #check if the move has already been made (op number)
-        #TODO: stop timer and reset
         msg = await request.json()
         if type(msg) == dict:
             text = msg
@@ -274,6 +274,7 @@ class replica:
                 return web.Response(body = msg)
                 
             else:
+                self.timer.cancel()
                 # add fields needed for the replicas (commit number op number etc.)
                 self.n_operation += 1
                 msg = json.dumps({
@@ -284,12 +285,13 @@ class replica:
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit,
                     "N_View": self.n_view})
-                await self.replica_broadcast("post", "PlayerMovement", msg)              
-
+                await self.replica_broadcast("post", "PlayerMovement", msg)
+                self.timer.start()
                 return web.Response()
         
         #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
+            self.timer.cancel()
             #TODO:apply update to gamestate
             if text["N_Operation"] > self.n_operation:
                 self.n_operation = text["N_Operation"]
@@ -301,7 +303,7 @@ class replica:
             # self.game_board.player
             # self.send_message(self.primary, "post", "PlayerMoveOK", )
             
-
+            self.timer.start()
             return web.Response()
     
     async def player_move_ok(self, request):
@@ -313,13 +315,22 @@ class replica:
             text = json.loads(msg)
         if self.local_ip == self.primary:
             self.request_ok[text['N_Operation']] += 1
-            if self.request_ok[text['N_Operation']] > (len(self.client_list)/2):
+            if self.request_ok[text['N_Operation']] >= (len(self.other_replicas)/2):
+
                 #request has quorum.
-                #TODO: find out how to give the lowest return numbers without overwriting commit
                 #TODO: Run compute gamestate function
                 pass
+            threshold = len(self.other_replicas)/2
+            i = self.n_commit
+            lower_found = True
+            while i >= self.n_operation and lower_found:
+                if self.request_ok[i] >= threshold:
+                    self.n_commit = i
+                    i += 1
+                else:
+                    lower_found = False
         
-     async def turn_cutoff(self):
+    async def turn_cutoff(self):
         
         pass
 
@@ -507,9 +518,7 @@ class replica:
             "N_Operation":self.n_operation,
             "N_Replica":self.local_ip
         }
-        # self.send_message(self.other_replicas[random.randint(0,len(self.other_replicas))], "get", "GetState", msg)
         tmp_list = self.other_replicas
-        # print(random.sample(tmp_list,1))
         resp = await self.send_message(random.sample(tmp_list, 1)[0], "get", "GetState", msg)
         #update state
         txt = json.loads(await resp.text())
