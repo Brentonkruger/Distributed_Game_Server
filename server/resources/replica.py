@@ -472,7 +472,7 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
-            self.game_board.recieve_game_state(json.dumps(text))
+            self.game_board = (json.dumps(text))
             update = json.dumps({
                 "Type": "Gamestate",
                 "N_View": self.n_view,
