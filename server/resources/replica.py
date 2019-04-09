@@ -110,6 +110,7 @@ class replica:
             "N_replica": self.local_ip,
             "Nonce": self.recovery_nonce
 	    })
+        print("Recovery started")
         self.replica_broadcast("post", "Recover", message)
 
     async def recovery_response(self, request):
@@ -169,6 +170,7 @@ class replica:
                 })
             # Send DoViewChange to new primary
             self.primary = self.get_new_primary_replica(self.primary)
+            print("View change started")
             self.send_message(self.primary, "post", "DoViewChange", msg)
         return web.Response()
 
