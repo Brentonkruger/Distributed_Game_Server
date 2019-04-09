@@ -120,6 +120,7 @@ class replica:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
                     # save state info
+                    self.game_board = board.Board(1)
                     self.game_board.recieve_game_state(json.loads(txt["Log"]))
                     self.n_commit = txt["N_Commit"]
                     self.n_operation = txt["N_Operation"]
