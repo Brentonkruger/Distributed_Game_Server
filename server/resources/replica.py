@@ -479,7 +479,7 @@ class replica:
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
-                "GameBoard": self.game_board.recieve_game_state(text)
+                "GameBoard": self.game_board.recieve_game_state(json.dumps(text))
             })
             await self.send_message(self.primary, "post", "GameState", update)
             return web.Response()
