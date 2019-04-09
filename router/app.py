@@ -27,6 +27,7 @@ def ClientJoin():
     global players
     ip = request.remote_addr #store clients ip
     joinMsg = request.get_json(force=True) #get message from client
+    joinMsg["Client_IP"] = ip
     joinResponse = requests.post(getURL() + "/ClientJoin", json=joinMsg) #send message to server
     #store client_id and ip
     body = joinResponse.json()
