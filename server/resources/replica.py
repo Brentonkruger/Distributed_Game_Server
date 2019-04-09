@@ -266,30 +266,30 @@ class replica:
             text = json.loads(msg)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            op_id = text['N_Operation']
-            self.client_requests[text['Client_ID']].append(text[op_id])
-            if op_id <= self.n_commit:
-                msg = json.dumps({
-                    "Type": "GameUpdate",
-                    "Gamestate": self.log[op_id]
-                })
-                return web.Response(body = msg)
+            # op_id = text['N_Operation']
+            # self.client_requests[text['Client_ID']].append(text[op_id])
+            # if op_id <= self.n_commit:
+            #     msg = json.dumps({
+            #         "Type": "GameUpdate",
+            #         "Gamestate": self.log[op_id]
+            #     })
+            #     return web.Response(body = msg)
                 
-            else:
-                self.timer.cancel()
-                # add fields needed for the replicas (commit number op number etc.)
-                self.n_operation += 1
-                msg = json.dumps({
-                    "Type":"PlayerMovement",
-                    "Operation": text['Operation'],
-                    "Client_ID": text['Client_ID'],
-                    "N_Request": text['N_Request'],
-                    "N_Operation": self.n_operation,
-                    "N_Commit": self.n_commit,
-                    "N_View": self.n_view})
-                await self.replica_broadcast("post", "PlayerMovement", msg)
-                self.timer.start()
-                return web.Response()
+            # else:
+            self.timer.cancel()
+            # add fields needed for the replicas (commit number op number etc.)
+            self.n_operation += 1
+            msg = json.dumps({
+                "Type":"PlayerMovement",
+                "Operation": text['Operation'],
+                "Client_ID": text['Client_ID'],
+                "N_Request": text['N_Request'],
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit,
+                "N_View": self.n_view})
+            await self.replica_broadcast("post", "PlayerMovement", msg)
+            self.timer.start()
+            return web.Response()
         
         #backups receive the player move and adds it to the gamestate, then replies when it's finished
         else:
