@@ -480,7 +480,7 @@ class replica:
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
-                "GameBoard": og_game_state
+                "GameBoard": json.loads(og_game_state)
             })
             await self.send_message(self.primary, "post", "Gamestate", update)
             return web.Response()
