@@ -409,7 +409,7 @@ class replica:
             
             start = json.dumps({
                 "Type": "GameStart",
-                "Gamestate": gamestate
+                "GameState": gamestate
             })
             await self.replica_broadcast("post", "StartConfirm", start)
             # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
