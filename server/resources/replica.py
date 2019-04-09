@@ -487,9 +487,12 @@ class replica:
     async def receive_gamestate(self, request):
         # Only primary should receive gamestate
         if self.primary == self.local_ip:
-            update = await request.json()
-            response = json.loads(update)
-            if response["Type"] == "GameState":
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
+            else:
+                text = json.loads(msg)
+            if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
@@ -498,7 +501,7 @@ class replica:
                 self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
-                self.game_board = self.game_board.recieve_game_state(response["GameBoard"])
+                self.game_board = self.game_board.recieve_game_state(text["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "Gamestate": self.game_board.get_full_gamestate()
