@@ -252,9 +252,9 @@ class replica:
 
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
-            await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
+            await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = data)
         if req_type == "get":
-            await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = json.dumps(data))
+            await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = data)
             
 
     async def player_move(self, request):
