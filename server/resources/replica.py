@@ -344,6 +344,11 @@ class replica:
 
 
     async def client_join(self, request):
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
         #client has joined up
         #check for a running game
         if not self.game_running:
@@ -502,7 +507,6 @@ class replica:
                 # self.turn_timer.cancel()
                 #TODO: update gamestate
                 #self.log
-                self.game_board.recieve_game_state(text["GameBoard"])
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
