@@ -474,7 +474,7 @@ class replica:
         else:
             self.game_board.recieve_game_state(json.dumps(text))
             update = json.dumps({
-                "Type": "GameState",
+                "Type": "Gamestate",
                 "N_View": self.n_view,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
