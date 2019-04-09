@@ -121,7 +121,7 @@ class replica:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
                     # save state info
-                    self.log = txt["Log"]###we will need to sort this log bit out
+                    self.game_board.recieve_game_state(txt["Log"])###we will need to sort this log bit out
                     self.n_commit = txt["N_Commit"]
                     self.n_operation = txt["N_Operation"]
                     self.n_view = txt["N_View"]
@@ -592,7 +592,7 @@ class replica:
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": txt['Nonce'],
-                    "Log": [i for i in self.log],
+                    "Log": json.loads(self.game_board.get_full_gamestate),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
