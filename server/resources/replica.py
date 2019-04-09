@@ -242,8 +242,8 @@ class replica:
             
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
-            self.timer = Timer(30, self.send_commit, self.loop)
-            self.timer.start(30, self.send_commit)
+            self.timer = Timer(300000, self.send_commit, self.loop)
+            self.timer.start(3000000, self.send_commit)
 
     async def get_new_primary_replica(self, old_ip):
         index = self.all_replicas.index(old_ip)
@@ -432,7 +432,7 @@ class replica:
                 self.ready_list = [0 for i in self.ready_list]
                 #TODO: load into gamestate
                 self.game_board.recieve_game_state(text["GameState"])
-                self.turn_timer = Timer(30, self.turn_cutoff, self.loop)
+                self.turn_timer = Timer(3000000, self.turn_cutoff, self.loop)
             #respond with startconfirm to server
             await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
         else:
@@ -613,8 +613,8 @@ class replica:
                 self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
-            self.timer = Timer(30, self.send_view_change, self.loop)
-            self.timer.start(30, self.send_view_change)
+            self.timer = Timer(3000000, self.send_view_change, self.loop)
+            self.timer.start(3000000, self.send_view_change)
             return web.Response()
         else: 
             return web.Response(status = 400)
