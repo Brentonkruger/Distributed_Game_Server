@@ -346,7 +346,7 @@ class replica:
                     text = msg
                 else:
                     text = json.loads(msg)
-                ready_list[self.client_list[request.remote]] = 0
+                self.ready_list[self.client_list[request.remote]] = 0
                 resp = json.dumps({
                     "Type": "ClientJoinOK",
                     "Client_ID": self.client_list[request.remote],
