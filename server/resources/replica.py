@@ -441,8 +441,8 @@ class replica:
                 #TODO: load into gamestate
                 self.game_board = board.Board(1)
                 self.game_board.recieve_game_state(text["GameState"])
-            #respond with startconfirm to server
-            await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
+                #respond with startconfirm to server
+                await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
         else:
             self.start_count += 1
             if self.start_count >= len(self.other_replicas)/2:
