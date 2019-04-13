@@ -128,7 +128,6 @@ class replica:
                     self.n_recovery_messages = 0
                     self.primary_recovery_response = False
                     self.current_state = State.NORMAL
-                    self.timer.start()
         return web.Response()
 
 
