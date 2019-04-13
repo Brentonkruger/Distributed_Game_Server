@@ -9,10 +9,6 @@ import aiohttp
 import random
 from . import board
 
-class Mode(Enum):
-    BACKUP = 0
-    PRIMARY = 1
-
 class State(Enum):
     NORMAL = 0
     VIEW_CHANGE = 1
@@ -46,13 +42,11 @@ class Timer:
 class replica:
     
     def __init__(self, routing_ip):
-        self.current_mode = Mode.BACKUP
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
         self.ready_up = []
         self.client_list = {}
-        self.client_requests = {}
         self.request_ok = {}
         self.ready_list = {}
         self.message_out_queue = asyncio.Queue()
@@ -416,8 +410,6 @@ class replica:
         #finalize the servers on game start
         #send the message to the clients to begin the game
         self.game_running = True
-        for index in range(len(self.client_list)):
-            self.client_requests[index] = []
 
         if self.local_ip == self.primary:
             size = int(len(self.client_list)) * 4
