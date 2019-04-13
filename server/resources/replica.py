@@ -103,8 +103,9 @@ class replica:
             "N_replica": self.local_ip,
             "Nonce": self.recovery_nonce
 	    })
-        print("Recovery started")
+        print("Recovery started...")
         await self.replica_broadcast("post", "Recover", message)
+        print("Recovered")
 
     async def recovery_response(self, request):
         if self.current_state == State.RECOVERING:
