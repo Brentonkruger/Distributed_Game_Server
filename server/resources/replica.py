@@ -605,6 +605,7 @@ class replica:
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
+            #TODO: update this log as well
             "Log":[i for i in self.log[txt['N_Operation']:]],
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
