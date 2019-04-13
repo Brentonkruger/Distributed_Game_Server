@@ -453,6 +453,7 @@ class replica:
                 self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
                 self.turn_timer.start()
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
+            return web.Response()
 
 
 
