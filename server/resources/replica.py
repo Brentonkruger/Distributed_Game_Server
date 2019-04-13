@@ -94,7 +94,7 @@ class replica:
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
 
-        self.timer.cancel()
+        # self.timer.cancel()
 
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
