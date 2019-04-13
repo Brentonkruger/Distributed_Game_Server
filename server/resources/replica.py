@@ -580,14 +580,17 @@ class replica:
     async def recovery_help(self, request):
         if self.current_state != State.RECOVERING:        
             #send back the recover message
-            body = await request.json()
-            txt = json.loads(body)
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
+            else:
+                text = json.loads(msg)
             if self.primary == self.local_ip:
                 #return the intense answer
                 reply = json.dumps({
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
-                    "Nonce": txt['Nonce'],
+                    "Nonce": text['Nonce'],
                     "Log": json.loads(self.game_board.get_full_gamestate),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
@@ -596,14 +599,14 @@ class replica:
                 return web.Response()
             else:
                 #return the small answer
-                msg = json.dumps({
+                payload = json.dumps({
                     "Type": "RecoveryResponse",
                     "N_View":self.n_view,
-                    "Nonce":txt['Nonce'],
+                    "Nonce":text['Nonce'],
                     "Log":"Nil",
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
-                self.send_message(request.remote, "post", "RecoveryResponse", msg)
+                self.send_message(request.remote, "post", "RecoveryResponse", payload)
                 return web.Response()
         else:
             return web.Response(status = 400)
