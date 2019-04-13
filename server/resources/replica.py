@@ -146,10 +146,13 @@ class replica:
             self.n_view += 1   
 
         # Check to see if view number is the same
-        reply = await request.json()
-        txt = json.loads(reply)
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
 
-        if self.n_view >= txt["N_View"]:
+        if self.n_view >= text["N_View"]:
             if not self.start_view_change_sent:
                 message = json.dumps({
                     "N_View": self.n_view,
