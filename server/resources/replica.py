@@ -104,7 +104,7 @@ class replica:
             "Nonce": self.recovery_nonce
 	    })
         print("Recovery started")
-        self.replica_broadcast("post", "Recover", message)
+        await self.replica_broadcast("post", "Recover", message)
 
     async def recovery_response(self, request):
         if self.current_state == State.RECOVERING:
@@ -148,7 +148,7 @@ class replica:
                 message = json.dumps({
                     "N_View": self.n_view,
                     "N_replica": self.local_ip})
-                self.replica_broadcast("post", "StartViewChange", message)
+                await self.replica_broadcast("post", "StartViewChange", message)
                 self.start_view_change_sent = True
             self.n_start_view_change_messages += 1
             
@@ -205,7 +205,7 @@ class replica:
                 })
 
                 # Broadcast message to other replicas
-                self.replica_broadcast("post", "StartView", startview_message)
+                await self.replica_broadcast("post", "StartView", startview_message)
                 msg = json.dumps({"Type": "New_Primary",
                     "IP": self.local_ip})
                 self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
