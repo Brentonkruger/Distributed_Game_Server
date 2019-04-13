@@ -45,26 +45,24 @@ class replica:
         self.current_state = State.NORMAL
         self.other_replicas = []
         self.all_replicas = []
-        self.ready_up = []
         self.client_list = {}
         self.request_ok = {}
         self.ready_list = {}
-        self.message_out_queue = asyncio.Queue()
         self.routing_layer = routing_ip
         self.n_view = 0
         self.n_commit = 0
-        self.operation_list = []
         self.n_operation = 0
         self.n_recovery_messages = 0
         self.start_count = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+
+        # Most likely this has to change to a dictionary
         self.n_gamestate_responses = 0
         self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
         self.current_turn = 0
-        self.request_gamestate_update = False
         self.log = []
         self.game_board = None
 
@@ -379,8 +377,6 @@ class replica:
             text = json.loads(msg)
         
         cid = text['Client_ID']
-        if cid not in self.ready_up:
-            self.ready_up.append(cid)
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
