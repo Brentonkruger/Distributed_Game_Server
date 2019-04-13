@@ -108,17 +108,20 @@ class replica:
 
     async def recovery_response(self, request):
         if self.current_state == State.RECOVERING:
-            body = await request.json()
-            txt = json.loads(body)
-            if txt["Nonce"] == self.recovery_nonce:
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
+            else:
+                text = json.loads(msg)
+            if text["Nonce"] == self.recovery_nonce:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
                     # save state info
                     self.game_board = board.Board(1)
-                    self.game_board.recieve_game_state(json.loads(txt["Log"]))
-                    self.n_commit = txt["N_Commit"]
-                    self.n_operation = txt["N_Operation"]
-                    self.n_view = txt["N_View"]
+                    self.game_board.recieve_game_state(json.loads(text["Log"]))
+                    self.n_commit = text["N_Commit"]
+                    self.n_operation = text["N_Operation"]
+                    self.n_view = text["N_View"]
                     self.primary_recovery_response = True
                 if self.n_recovery_messages >= int(len(self.other_replicas)/2) and self.primary_recovery_response:
                     self.n_recovery_messages = 0
