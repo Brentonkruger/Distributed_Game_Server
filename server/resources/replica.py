@@ -644,7 +644,7 @@ class replica:
                 if i not in self.other_replicas and i != self.local_ip:
                     self.other_replicas.append(i)
             if txt['N_Commit'] > self.n_commit or txt['N_Operation'] > self.n_operation or txt['N_View'] > self.n_view:
-                self.start_recovery()
+                await self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
             self.timer = Timer(8, self.send_view_change, self.loop)
