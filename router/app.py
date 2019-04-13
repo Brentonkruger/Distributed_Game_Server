@@ -28,7 +28,7 @@ def ClientJoin():
     ip = request.remote_addr #store clients ip
     #check if client is reconnecting
     if str(ip) in players.values():
-    	return "reconnecting"
+    	return jsonify({'Reconnecting': 'True'})
 
     joinMsg = request.get_json(force=True) #get message from client
     joinMsg["Client_IP"] = ip
