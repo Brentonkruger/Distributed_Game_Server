@@ -26,6 +26,10 @@ def getPlayerURL(ip):
 def ClientJoin():
     global players
     ip = request.remote_addr #store clients ip
+    #check if client is reconnecting
+    if str(ip) in players.values():
+    	return "reconnecting"
+
     joinMsg = request.get_json(force=True) #get message from client
     joinMsg["Client_IP"] = ip
     joinResponse = requests.post(getURL() + "/ClientJoin", json=joinMsg) #send message to server
