@@ -118,7 +118,8 @@ class replica:
                 if request.remote == self.primary:
                     # save state info
                     self.game_board = board.Board(1)
-                    self.game_board.recieve_game_state(json.loads(text["Log"]))
+                    if text["Log"] != None:
+                        self.game_board.recieve_game_state(json.loads(text["Log"]))
                     self.n_commit = text["N_Commit"]
                     self.n_operation = text["N_Operation"]
                     self.n_view = text["N_View"]
