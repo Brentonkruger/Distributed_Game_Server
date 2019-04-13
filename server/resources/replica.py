@@ -153,7 +153,7 @@ class replica:
             text = json.loads(msg)
         print("View change message received. Starting view change to ", self.n_view)
 
-        if self.n_view >= text["N_View"]:
+        if self.n_view < text["N_View"]:
             if not self.start_view_change_sent:
                 message = json.dumps({
                     "N_View": self.n_view,
@@ -685,7 +685,7 @@ class replica:
                             
                             web.post("/ReadyConfirm", self.ready_confirm),
                             web.post('/StartConfirm', self.start_confirm),
-                            web.post('/StartViewChange', self.start_view_change),
+                            web.post('/v', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
                             web.post('/Recover', self.recovery_help),
