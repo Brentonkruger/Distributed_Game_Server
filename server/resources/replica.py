@@ -340,6 +340,7 @@ class replica:
                     i += 1
                 else:
                     lower_found = False
+            return web.Response()
         
     async def turn_cutoff(self):
         self.current_turn += 1
@@ -508,7 +509,7 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
+            if self.n_gamestate_responses == int(len(self.other_replicas) / 2) + 1:
                 # if self.current_turn
                 #TODO: fix
                 # self.turn_timer.cancel()
