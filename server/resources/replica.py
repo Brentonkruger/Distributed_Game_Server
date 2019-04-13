@@ -482,7 +482,7 @@ class replica:
                 "GameBoard": json.loads(og_game_state)
             })
             await self.send_message(self.primary, "post", "Gamestate", update)
-            return web.Response()
+        return web.Response()
     
     async def receive_gamestate(self, request):
         # Only primary should receive gamestate
@@ -508,6 +508,7 @@ class replica:
                 
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 self.turn_timer.start()
+            return web.Response()
 
         # If not primary, send address of primary to replica
         else:
