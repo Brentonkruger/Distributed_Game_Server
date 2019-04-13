@@ -318,6 +318,7 @@ class replica:
                 "N_View": self.n_view})
 
             self.request_ok[self.n_operation] = 0
+            #TODO: Add to the log
             await self.replica_broadcast("post", "PlayerMovement", msg)
             self.timer.start()
             return web.Response()
@@ -331,8 +332,6 @@ class replica:
                 self.n_commit = text["N_Commit"]
             if text["N_View"] > self.n_view:
                 self.start_state_transfer()
-            #TODO:update with board apply from primary
-            # self.game_board.player
             self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
             await self.send_message(self.primary, "post", "PlayerMoveOK", json.dumps(text))
 
@@ -340,7 +339,6 @@ class replica:
             return web.Response()
     
     async def player_move_ok(self, request):
-        #TODO: implement
         msg = await request.json()
         if type(msg) == dict:
             text = msg
@@ -349,9 +347,6 @@ class replica:
         if self.local_ip == self.primary:
             self.request_ok[text['N_Operation']] += 1
             if self.request_ok[text['N_Operation']] >= (len(self.other_replicas)/2):
-
-                #request has quorum.
-                #TODO: Run compute gamestate function
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
    
             threshold = len(self.other_replicas)/2
@@ -369,6 +364,7 @@ class replica:
         self.current_turn += 1
         if self.local_ip == self.primary:
             board = self.game_board.complete_turn()
+            # TODO: Add a message to the log.
             await self.replica_broadcast("post", "ComputeGamestate", board) 
 
 
@@ -401,7 +397,6 @@ class replica:
             return web.Response(body = resp)
         
         else:
-            #TODO: Implement client rejoin
             return web.Response(status = 400)
 
     async def readied_up(self, request):
@@ -455,6 +450,7 @@ class replica:
                 "Type": "GameStart",
                 "GameState": gamestate
             })
+            # TODO: Add to the log
             await self.replica_broadcast("post", "StartConfirm", start)
             # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
             # 
@@ -475,7 +471,6 @@ class replica:
             if can_start:
                 for key, val in self.ready_list.items():
                     self.ready_list[key] = 0
-                #TODO: load into gamestate
                 self.game_board = board.Board(1)
                 self.game_board.recieve_game_state(text["GameState"])
                 #respond with startconfirm to server
@@ -534,11 +529,6 @@ class replica:
             # Once enough responses received, send to clients with final gamestate
             if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
                 self.game_sent = True
-                # if self.current_turn
-                #TODO: fix
-                # self.turn_timer.cancel()
-                #TODO: update gamestate
-                #self.log
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
@@ -713,7 +703,7 @@ class replica:
                             
                             web.post("/ReadyConfirm", self.ready_confirm),
                             web.post('/StartConfirm', self.start_confirm),
-                            web.post('/v', self.start_view_change),
+                            web.post('/StartViewChange', self.start_view_change),
                             web.post('/DoViewChange', self.do_view_change),
                             web.post('/StartView', self.start_view),
                             web.post('/Recover', self.recovery_help),
