@@ -165,7 +165,7 @@ class replica:
             # Send DoViewChange to new primary
             self.primary = self.get_new_primary_replica(self.primary)
             print("View change started")
-            self.send_message(self.primary, "post", "DoViewChange", msg)
+            await self.send_message(self.primary, "post", "DoViewChange", msg)
         return web.Response()
 
     async def send_view_change(self):
@@ -601,7 +601,7 @@ class replica:
                     "N_Commit": self.n_commit
                 })
                 print("Sending Primary Recover Message...")
-                self.send_message(request.remote, "post", "RecoveryResponse", reply)
+                await self.send_message(request.remote, "post", "RecoveryResponse", reply)
                 return web.Response()
             else:
                 #return the small answer
@@ -613,7 +613,7 @@ class replica:
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
                 print("Sending Backup Recover Message...")
-                self.send_message(request.remote, "post", "RecoveryResponse", payload)
+                await self.send_message(request.remote, "post", "RecoveryResponse", payload)
                 return web.Response()
         else:
             return web.Response(status = 400)
