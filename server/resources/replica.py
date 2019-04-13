@@ -109,11 +109,13 @@ class replica:
 
     async def recovery_response(self, request):
         if self.current_state == State.RECOVERING:
+            
             msg = await request.json()
             if type(msg) == dict:
                 text = msg
             else:
                 text = json.loads(msg)
+            print("Recovery message received from: ", request.remote)
             if text["Nonce"] == self.recovery_nonce:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
