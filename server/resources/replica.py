@@ -586,15 +586,21 @@ class replica:
             else:
                 text = json.loads(msg)
             if self.primary == self.local_ip:
+
+                if self.game_board == None:
+                    gameboard = None
+                else:
+                    gameboard = json.loads(self.game_board.get_full_gamestate())
                 #return the intense answer
                 reply = json.dumps({
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": text['Nonce'],
-                    "Log": json.loads(self.game_board.get_full_gamestate),
+                    "Log": gameboard,
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
+                print("Sending Primary Recover Message...")
                 self.send_message(request.remote, "post", "RecoveryResponse", reply)
                 return web.Response()
             else:
@@ -606,6 +612,7 @@ class replica:
                     "Log":"Nil",
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
+                print("Sending Backup Recover Message...")
                 self.send_message(request.remote, "post", "RecoveryResponse", payload)
                 return web.Response()
         else:
