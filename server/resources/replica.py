@@ -144,6 +144,7 @@ class replica:
                 if request.remote == self.primary:
                     # save state info
                     self.game_board = board.Board(1)
+                    # TODO: Switch this to the dictionary thing
                     if text["Log"] != None:
                         self.game_board.recieve_game_state(json.loads(text["Log"]))
                     self.n_commit = text["N_Commit"]
@@ -189,7 +190,8 @@ class replica:
             msg = json.dumps({
                 "Type": "DoViewChange",
                 "N_View": self.n_view,
-                "Log": self.log.values(),
+                #TODO: This should return all of the log, including the lists and such within it
+                "Log": self.log,
                 "N_View_Old": self.n_view-1,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
@@ -216,6 +218,7 @@ class replica:
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
         if self.primary == self.local_ip:
+            #TODO: Do the message retriaval garbage
             reply = await request.json()
             txt = reply.loads(reply)
             #update the primary if behind 
@@ -577,6 +580,7 @@ class replica:
     async def start_state_transfer(self):
         #send state transfer
         self.n_operation = self.n_commit
+        #TODO: Fix this garbage
         self.log = self.log[:self.n_operation+1]
         msg = {
             "Type": "GetState",
@@ -591,6 +595,7 @@ class replica:
         self.n_view = txt['N_View']
         self.n_operation = txt['N_Operation']
         self.n_commit = txt['N_Commit']
+        #TODO: Also fix this
         self.log.append(i for i in txt['Log'])
 
     async def get_state(self, request):
@@ -625,6 +630,7 @@ class replica:
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": text['Nonce'],
+                    #TODO: This should also be fixed
                     "Log": gameboard,
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
@@ -638,6 +644,7 @@ class replica:
                     "Type": "RecoveryResponse",
                     "N_View":self.n_view,
                     "Nonce":text['Nonce'],
+                    #TODO: fix  this?
                     "Log":"Nil",
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
