@@ -529,6 +529,7 @@ class replica:
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
+        print("Commit received")
         self.timer.cancel()
         msg = await request.json()
         if type(msg) == dict:
