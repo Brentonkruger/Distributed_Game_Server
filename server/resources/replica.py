@@ -600,7 +600,7 @@ class replica:
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
-                print("Sending Primary Recover Message...")
+                print("Sending Primary Recovery Message...")
                 await self.send_message(request.remote, "post", "RecoveryResponse", reply)
                 return web.Response()
             else:
@@ -612,7 +612,7 @@ class replica:
                     "Log":"Nil",
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
-                print("Sending Backup Recover Message...")
+                print("Sending Backup Recovery Message...")
                 await self.send_message(request.remote, "post", "RecoveryResponse", payload)
                 return web.Response()
         else:
