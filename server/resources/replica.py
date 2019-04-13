@@ -95,6 +95,7 @@ class replica:
         self.n_recovery_messages = 0
 
         self.timer.cancel()
+
         #Send broadcast to all replicas with random nonce and its address
         self.recovery_nonce = secrets.randbits(32)
         message = json.dumps({
@@ -348,23 +349,25 @@ class replica:
         if not self.game_running:
             if text["Client_IP"] not in self.client_list:
                 self.client_list[text["Client_IP"]] = len(self.client_list)
-                print("added client")
-            if self.local_ip == self.primary:
-                msg = await request.json()
-                if type(msg) == dict:
-                    text = msg
-                else:
-                    text = json.loads(msg)
-                self.ready_list[self.client_list[text["Client_IP"]]] = 0
-                resp = json.dumps({
-                    "Type": "ClientJoinOK",
-                    "Client_ID": self.client_list[text["Client_IP"]],
-                    "N_Request": text['N_Request']})
-                    
-                return web.Response(body = resp)
+                print("Adding Client: " + str(text["Client_IP"]))
+            # if self.local_ip == self.primary:
+            # TODO: Broadcast the request across replicas
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
             else:
-                return web.Response()
+                text = json.loads(msg)
+            self.ready_list[self.client_list[text["Client_IP"]]] = 0
+            resp = json.dumps({
+                "Type": "ClientJoinOK",
+                "Client_ID": self.client_list[text["Client_IP"]],
+                "N_Request": text['N_Request']})
+                
+            self.n_operation += 1
+            return web.Response(body = resp)
+        
         else:
+            #TODO: Implement client rejoin
             return web.Response(status = 400)
 
     async def readied_up(self, request):
