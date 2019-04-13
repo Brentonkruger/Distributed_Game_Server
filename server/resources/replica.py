@@ -13,6 +13,29 @@ class State(Enum):
     NORMAL = 0
     VIEW_CHANGE = 1
     RECOVERING = 2
+
+class Message:
+    def __init__(self, opp_num, msg_body):
+        self.recieved_backups = {}
+        self.operation_number = opp_num
+        self.msg_body = msg_body
+        self.sent_to_client = False
+
+    def recieve_backup(self, backup_ip):
+        if not backup_ip in self.recieved_backups:
+            self.recieved_backups[backup_ip] = True
+            return len(self.recieved_backups)
+        else:
+            return -1
+
+    def client_sent(self):
+        self.sent_to_client = True
+
+    def get_message_number(self):
+        return self.operation_number
+
+    def get_message_body(self):
+        return self.msg_body
     
 class Timer:
     def __init__(self, timeout, callback, loop):
@@ -63,7 +86,7 @@ class replica:
         self.primary_recovery_response = False
         self.game_running = False
         self.current_turn = 0
-        self.log = []
+        self.log = {}
         self.game_board = None
 
         #get Ip of the local computer
@@ -166,7 +189,7 @@ class replica:
             msg = json.dumps({
                 "Type": "DoViewChange",
                 "N_View": self.n_view,
-                "Log": [i for i in self.log],
+                "Log": self.log.values(),
                 "N_View_Old": self.n_view-1,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
@@ -509,7 +532,8 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses == int(len(self.other_replicas) / 2) + 1:
+            if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
+                self.game_sent = True
                 # if self.current_turn
                 #TODO: fix
                 # self.turn_timer.cancel()
@@ -546,12 +570,15 @@ class replica:
             
 
     async def start_view(self, request):
-        body = await request.json()
-        txt = json.loads(body)
-        self.n_view = txt['N_View']
-        self.Log = txt['Log']
-        self.n_operation = txt['N_Operation']
-        self.n_commit = txt['N_Commit']
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        self.n_view = text['N_View']
+        self.Log = text['Log']
+        self.n_operation = text['N_Operation']
+        self.n_commit = text['N_Commit']
         self.primary = request.remote
         self.current_state = State.NORMAL
         return web.Request()
