@@ -343,8 +343,9 @@ class replica:
             return web.Response()
         
     async def turn_cutoff(self):
-        self.current_turn += 1
         if self.local_ip == self.primary:
+            self.current_turn += 1
+            print("Doing turn number: ", str(self.current_turn))
             board = self.game_board.complete_turn()
             await self.replica_broadcast("post", "ComputeGamestate", board) 
 
