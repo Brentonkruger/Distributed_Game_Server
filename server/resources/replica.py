@@ -224,6 +224,7 @@ class replica:
             #update the primary if behind 
             if self.n_view <= txt["N_View"]:
                 if self.n_operation < txt["N_Operation"]:
+                    #TODO: update the log properly
                     self.log = txt["Log"]
                     self.n_operation = txt["N_Operation"]
                     self.n_commit = txt["N_Commit"]
@@ -298,16 +299,7 @@ class replica:
             text = json.loads(msg)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            # op_id = text['N_Operation']
-            # self.client_requests[text['Client_ID']].append(text[op_id])
-            # if op_id <= self.n_commit:
-            #     msg = json.dumps({
-            #         "Type": "GameUpdate",
-            #         "Gamestate": self.log[op_id]
-            #     })
-            #     return web.Response(body = msg)
-                
-            # else:
+            
             self.timer.cancel()
             # add fields needed for the replicas (commit number op number etc.)
             self.n_operation += 1

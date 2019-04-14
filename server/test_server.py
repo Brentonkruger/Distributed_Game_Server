@@ -3,11 +3,28 @@ from http import server
 from http.server import SimpleHTTPRequestHandler
 
 
-# async def parse_message(reader, writer):
-#         msg = await reader.read()
-#         #parse the message (json) and call the corresponding method to deal with it.
-#         print(msg.decode())
+class Message:
+    def __init__(self, opp_num, msg_body):
+        self.recieved_backups = {}
+        self.operation_number = opp_num
+        self.msg_body = msg_body
+        self.sent_to_client = False
 
+    def recieve_backup(self, backup_ip):
+        if not backup_ip in self.recieved_backups:
+            self.recieved_backups[backup_ip] = True
+            return len(self.recieved_backups)
+        else:
+            return -1
+
+    def client_sent(self):
+        self.sent_to_client = True
+
+    def get_message_number(self):
+        return self.operation_number
+
+    def get_message_body(self):
+        return self.msg_body
 
 
 def main():
@@ -16,10 +33,4 @@ def main():
         a_server.serve_forever
 
         
-#     a_server = await asyncio.start_server(parse_message, port=9998)
-
-#     async with a_server:
-#         await a_server.serve_forever()
-
-# asyncio.run(main())
 main()
