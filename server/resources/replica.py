@@ -344,6 +344,7 @@ class replica:
         
     async def turn_cutoff(self):
         if self.local_ip == self.primary:
+            self.this_turns_responses = 0
             self.current_turn += 1
             print("Doing turn number: ", str(self.current_turn))
             board = self.game_board.complete_turn()
@@ -510,7 +511,8 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2) + 1:
+            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2) + 1 and self.this_turns_responses == 0:
+                self.this_turns_responses = 1
                 # if self.current_turn
                 #TODO: fix
                 # self.turn_timer.cancel()
