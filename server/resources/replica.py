@@ -157,9 +157,7 @@ class replica:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
                     # save state info
-                    self.game_board = board.Board(1)
-                    # TODO: Switch this to the dictionary thing
-                    
+                    self.game_board = board.Board(1)                    
                     self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
                     self.n_commit = text["N_Commit"]
                     self.n_operation = text["N_Operation"]
@@ -327,7 +325,7 @@ class replica:
                 "N_View": self.n_view})
 
             self.request_ok[self.n_operation] = 0
-            #TODO: Add to the log
+            self.log[self.n_operation] = Message(self.n_operation, msg)
             await self.replica_broadcast("post", "PlayerMovement", msg)
             self.timer.start()
             return web.Response()
@@ -390,7 +388,7 @@ class replica:
                 self.client_list[text["Client_IP"]] = len(self.client_list)
                 print("Adding Client: " + str(text["Client_IP"]))
             # if self.local_ip == self.primary:
-            # TODO: Broadcast the request across replicas
+            # TODO: Broadcast the request across replicas, this means implement this function if the replica is not the server.
             msg = await request.json()
             if type(msg) == dict:
                 text = msg
@@ -585,10 +583,8 @@ class replica:
 
     async def start_state_transfer(self):
         #send state transfer
+        #set operation back to where things were still ok
         self.n_operation = self.n_commit
-        #TODO: Fix this garbage
-        # Do we need this here?
-        #self.log = self.log[:self.n_operation+1]
         msg = {
             "Type": "GetState",
             "N_View":self.n_view,
@@ -602,8 +598,7 @@ class replica:
         self.n_view = txt['N_View']
         self.n_operation = txt['N_Operation']
         self.n_commit = txt['N_Commit']
-        for k,v in txt['Log']:
-            self.log[k] = Message(**v)
+        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
         
 
     async def get_state(self, request):
