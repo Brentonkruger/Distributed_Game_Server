@@ -9,9 +9,12 @@ from json import JSONEncoder
 # import aiohttp
 
 class Message():
-    def __init__(self, opp_num, msg_body):
-        self.recieved_backups = {}
-        self.operation_number = opp_num
+    def __init__(self, operation_number, msg_body, recieved_backups = None, sent_to_client = False):
+        if recieved_backups == None:
+            self.recieved_backups = {}
+        else:
+            self.recieved_backups = recieved_backups
+        self.operation_number = operation_number
         self.msg_body = msg_body
         self.sent_to_client = False
     
@@ -42,6 +45,10 @@ class MessageEncoder(json.JSONEncoder):
             "sent_to_client": obj.sent_to_client}
         return json.JSONEncoder.default(self, obj)
 
+# class MessageDecoder(json.JSONDecoder):
+#     def decode(self, obj):
+#         return { }
+
 
 
 def client():
@@ -50,18 +57,26 @@ def client():
     msg.recieve_backup("192.168.2.0")
     msg.recieve_backup("192.168.2.1")
 
-    print(msg)
+    # print(msg)
     jd = json.dumps(obj = msg, cls = MessageEncoder)
     print(jd)
 
-    newmsg = json.loads(jd)
-    print(newmsg)
-    jd2 = json.dumps(newmsg, cls=MessageEncoder)
-    print(jd2)
-    # log = {}
-    # log[op_num] = msg
+    newobj = json.loads(jd)
+    # print(newobj)
+    newmsg = Message(**newobj)
+    # print(newmsg)
+   
+    log = {}
+    log[op_num] = msg
+    # print(log)
 
-    # print(json.dumps(log))
+    log_encoded = json.dumps(log, cls=MessageEncoder)
+
+    log_decoded = json.loads(log_encoded)
+    # print(type(log_decoded))
+
+    newLog = {k:Message(**v) for k,v in json.loads(log_encoded).items()}
+    print(newLog)
    
     # ## aiohttp ##
     # async with aiohttp.ClientSession() as session:
