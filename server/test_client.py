@@ -48,12 +48,16 @@ def client():
     op_num = 0
     msg = Message(op_num, "BODY")
     msg.recieve_backup("192.168.2.0")
+    msg.recieve_backup("192.168.2.1")
+
     print(msg)
     jd = json.dumps(obj = msg, cls = MessageEncoder)
     print(jd)
 
     newmsg = json.loads(jd)
     print(newmsg)
+    jd2 = json.dumps(newmsg, cls=MessageEncoder)
+    print(jd2)
     # log = {}
     # log[op_num] = msg
 
