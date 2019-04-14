@@ -36,6 +36,16 @@ class Message:
 
     def get_message_body(self):
         return self.msg_body
+
+class MessageEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Message):
+            return {
+            "recieved_backups": obj.recieved_backups,
+            "operation_number": obj.operation_number, 
+            "msg_body": obj.msg_body, 
+            "sent_to_client": obj.sent_to_client}
+        return json.JSONEncoder.default(self, obj)
     
 class Timer:
     def __init__(self, timeout, callback, loop):
