@@ -93,6 +93,7 @@ class replica:
         self.start_count = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.this_turns_responses = 0
 
         # Most likely this has to change to a dictionary
         self.n_gamestate_responses = 0
@@ -368,8 +369,10 @@ class replica:
             return web.Response()
         
     async def turn_cutoff(self):
-        self.current_turn += 1
         if self.local_ip == self.primary:
+            self.this_turns_responses = 0
+            self.current_turn += 1
+            print("Doing turn number: ", str(self.current_turn))
             board = self.game_board.complete_turn()
             # TODO: Add a message to the log.
             await self.replica_broadcast("post", "ComputeGamestate", board) 
@@ -414,8 +417,6 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        
-        cid = text['Client_ID']
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
@@ -534,8 +535,8 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2):
-                self.game_sent = True
+            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2) + 1 and self.this_turns_responses == 0:
+                self.this_turns_responses = 1
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
@@ -594,19 +595,18 @@ class replica:
         tmp_list = self.other_replicas
         resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
         #update state
-        txt = json.loads(await resp.text())
-        self.n_view = txt['N_View']
-        self.n_operation = txt['N_Operation']
-        self.n_commit = txt['N_Commit']
-        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
-        
-
-    async def get_state(self, request):
-        msg = await request.json()
+        msg = await resp.text()
         if type(msg) == dict:
             text = msg
         else:
             text = json.loads(msg)
+        self.n_view = text['N_View']
+        self.n_operation = text['N_Operation']
+        self.n_commit = text['N_Commit']
+        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+        
+
+    async def get_state(self, request):
 
         msg = json.dumps({
             "Type": "NewState",
