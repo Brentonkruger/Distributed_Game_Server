@@ -14,12 +14,16 @@ class State(Enum):
     VIEW_CHANGE = 1
     RECOVERING = 2
 
-class Message:
-    def __init__(self, opp_num, msg_body):
-        self.recieved_backups = {}
-        self.operation_number = opp_num
+class Message():
+    def __init__(self, operation_number, msg_body, recieved_backups = None, sent_to_client = False):
+        if recieved_backups == None:
+            self.recieved_backups = {}
+        else:
+            self.recieved_backups = recieved_backups
+        self.operation_number = operation_number
         self.msg_body = msg_body
         self.sent_to_client = False
+    
 
     def recieve_backup(self, backup_ip):
         if not backup_ip in self.recieved_backups:
@@ -33,9 +37,19 @@ class Message:
 
     def get_message_number(self):
         return self.operation_number
-
+ 
     def get_message_body(self):
         return self.msg_body
+
+class MessageEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Message):
+            return {
+            "recieved_backups": obj.recieved_backups,
+            "operation_number": obj.operation_number, 
+            "msg_body": obj.msg_body, 
+            "sent_to_client": obj.sent_to_client}
+        return json.JSONEncoder.default(self, obj)
     
 class Timer:
     def __init__(self, timeout, callback, loop):
@@ -79,6 +93,7 @@ class replica:
         self.start_count = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.this_turns_responses = 0
 
         # Most likely this has to change to a dictionary
         self.n_gamestate_responses = 0
@@ -143,10 +158,8 @@ class replica:
                 self.n_recovery_messages +=1
                 if request.remote == self.primary:
                     # save state info
-                    self.game_board = board.Board(1)
-                    # TODO: Switch this to the dictionary thing
-                    if text["Log"] != None:
-                        self.game_board.recieve_game_state(json.loads(text["Log"]))
+                    self.game_board = board.Board(1)                    
+                    self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
                     self.n_commit = text["N_Commit"]
                     self.n_operation = text["N_Operation"]
                     self.n_view = text["N_View"]
@@ -190,8 +203,7 @@ class replica:
             msg = json.dumps({
                 "Type": "DoViewChange",
                 "N_View": self.n_view,
-                #TODO: This should return all of the log, including the lists and such within it
-                "Log": self.log,
+                "Log": json.dumps(self.log, cls = MessageEncoder),
                 "N_View_Old": self.n_view-1,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
@@ -218,16 +230,17 @@ class replica:
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
         if self.primary == self.local_ip:
-            #TODO: Do the message retriaval garbage
-            reply = await request.json()
-            txt = reply.loads(reply)
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
+            else:
+                text = json.loads(msg)
             #update the primary if behind 
-            if self.n_view <= txt["N_View"]:
-                if self.n_operation < txt["N_Operation"]:
-                    #TODO: update the log properly
-                    self.log = txt["Log"]
-                    self.n_operation = txt["N_Operation"]
-                    self.n_commit = txt["N_Commit"]
+            if self.n_view <= text["N_View"]:
+                if self.n_operation < text["N_Operation"]:
+                    self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+                    self.n_operation = text["N_Operation"]
+                    self.n_commit = text["N_Commit"]
 
             if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
                 # Change status back to normal and send startview message to other replicas
@@ -236,7 +249,7 @@ class replica:
                 startview_message = json.dumps({
                     "Type": "StartView",
                     "N_View": self.n_view,
-                    "Log": self.log,
+                    "Log": json.dumps(self.log, cls = MessageEncoder),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
@@ -313,7 +326,7 @@ class replica:
                 "N_View": self.n_view})
 
             self.request_ok[self.n_operation] = 0
-            #TODO: Add to the log
+            self.log[self.n_operation] = Message(self.n_operation, msg)
             await self.replica_broadcast("post", "PlayerMovement", msg)
             self.timer.start()
             return web.Response()
@@ -356,8 +369,10 @@ class replica:
             return web.Response()
         
     async def turn_cutoff(self):
-        self.current_turn += 1
         if self.local_ip == self.primary:
+            self.this_turns_responses = 0
+            self.current_turn += 1
+            print("Doing turn number: ", str(self.current_turn))
             board = self.game_board.complete_turn()
             # TODO: Add a message to the log.
             await self.replica_broadcast("post", "ComputeGamestate", board) 
@@ -376,7 +391,7 @@ class replica:
                 self.client_list[text["Client_IP"]] = len(self.client_list)
                 print("Adding Client: " + str(text["Client_IP"]))
             # if self.local_ip == self.primary:
-            # TODO: Broadcast the request across replicas
+            # TODO: Broadcast the request across replicas, this means implement this function if the replica is not the server.
             msg = await request.json()
             if type(msg) == dict:
                 text = msg
@@ -402,8 +417,6 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        
-        cid = text['Client_ID']
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
             await self.replica_broadcast("post", "Ready", json.dumps(text))
@@ -522,8 +535,8 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses > int(len(self.other_replicas) / 2):
-                self.game_sent = True
+            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2) + 1 and self.this_turns_responses == 0:
+                self.this_turns_responses = 1
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
@@ -561,7 +574,7 @@ class replica:
         else:
             text = json.loads(msg)
         self.n_view = text['N_View']
-        self.Log = text['Log']
+        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
         self.n_operation = text['N_Operation']
         self.n_commit = text['N_Commit']
         self.primary = request.remote
@@ -571,9 +584,8 @@ class replica:
 
     async def start_state_transfer(self):
         #send state transfer
+        #set operation back to where things were still ok
         self.n_operation = self.n_commit
-        #TODO: Fix this garbage
-        self.log = self.log[:self.n_operation+1]
         msg = {
             "Type": "GetState",
             "N_View":self.n_view,
@@ -583,22 +595,23 @@ class replica:
         tmp_list = self.other_replicas
         resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
         #update state
-        txt = json.loads(await resp.text())
-        self.n_view = txt['N_View']
-        self.n_operation = txt['N_Operation']
-        self.n_commit = txt['N_Commit']
-        #TODO: Also fix this
-        self.log.append(i for i in txt['Log'])
+        msg = await resp.text()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        self.n_view = text['N_View']
+        self.n_operation = text['N_Operation']
+        self.n_commit = text['N_Commit']
+        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+        
 
     async def get_state(self, request):
-        body = await request.json()
-        txt = json.loads(body)
 
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
-            #TODO: update this log as well
-            "Log":[i for i in self.log[txt['N_Operation']:]],
+            "Log": json.dumps(self.log, cls = MessageEncoder),
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
             
@@ -614,17 +627,16 @@ class replica:
                 text = json.loads(msg)
             if self.primary == self.local_ip:
 
-                if self.game_board == None:
-                    gameboard = None
-                else:
-                    gameboard = json.loads(self.game_board.get_full_gamestate())
+                #if self.game_board == None:
+                 #   gameboard = None
+                #else:
+                 #   gameboard = json.loads(self.game_board.get_full_gamestate())
                 #return the intense answer
                 reply = json.dumps({
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": text['Nonce'],
-                    #TODO: This should also be fixed
-                    "Log": gameboard,
+                    "Log": json.dumps(self.log, cls = MessageEncoder),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
@@ -637,7 +649,6 @@ class replica:
                     "Type": "RecoveryResponse",
                     "N_View":self.n_view,
                     "Nonce":text['Nonce'],
-                    #TODO: fix  this?
                     "Log":"Nil",
                     "N_Operation":"Nil",
                     "N_Commit":"Nil"})
