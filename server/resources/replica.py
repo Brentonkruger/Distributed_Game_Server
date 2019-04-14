@@ -14,12 +14,16 @@ class State(Enum):
     VIEW_CHANGE = 1
     RECOVERING = 2
 
-class Message:
-    def __init__(self, opp_num, msg_body):
-        self.recieved_backups = {}
-        self.operation_number = opp_num
+class Message():
+    def __init__(self, operation_number, msg_body, recieved_backups = None, sent_to_client = False):
+        if recieved_backups == None:
+            self.recieved_backups = {}
+        else:
+            self.recieved_backups = recieved_backups
+        self.operation_number = operation_number
         self.msg_body = msg_body
         self.sent_to_client = False
+    
 
     def recieve_backup(self, backup_ip):
         if not backup_ip in self.recieved_backups:
@@ -33,7 +37,7 @@ class Message:
 
     def get_message_number(self):
         return self.operation_number
-
+ 
     def get_message_body(self):
         return self.msg_body
 
