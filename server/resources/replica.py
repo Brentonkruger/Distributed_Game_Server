@@ -188,7 +188,7 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        print("View change message received. Starting view change to ", self.n_view)
+        print("View change message received from ", request.remote, ". Starting view change to ", self.n_view)
 
         if self.n_view < text["N_View"]:
             if not self.start_view_change_sent:
