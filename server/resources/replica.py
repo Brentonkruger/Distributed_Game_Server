@@ -56,6 +56,7 @@ class replica:
         self.start_count = 0
         self.n_start_view_change_messages = 0
         self.n_do_view_change_messages = 0
+        self.this_turns_responses = 0
 
         # Most likely this has to change to a dictionary
         self.n_gamestate_responses = 0
