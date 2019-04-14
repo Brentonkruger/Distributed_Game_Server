@@ -77,6 +77,10 @@ def client():
 
     newLog = {k:Message(**v) for k,v in json.loads(log_encoded).items()}
     print(newLog)
+
+    #       json.dumps(self.log, cls = MessageEncoder)
+    #       {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+    #       
    
     # ## aiohttp ##
     # async with aiohttp.ClientSession() as session:

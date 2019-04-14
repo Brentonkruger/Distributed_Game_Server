@@ -159,9 +159,8 @@ class replica:
                     # save state info
                     self.game_board = board.Board(1)
                     # TODO: Switch this to the dictionary thing
-                    #if text["Log"] != None:
-                     #   self.game_board.recieve_game_state()
-                    self.log = text["Log"]
+                    
+                    self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
                     self.n_commit = text["N_Commit"]
                     self.n_operation = text["N_Operation"]
                     self.n_view = text["N_View"]
@@ -205,8 +204,7 @@ class replica:
             msg = json.dumps({
                 "Type": "DoViewChange",
                 "N_View": self.n_view,
-                #TODO: This should return all of the log, including the lists and such within it
-                "Log": self.log,
+                "Log": json.dumps(self.log, cls = MessageEncoder),
                 "N_View_Old": self.n_view-1,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
@@ -233,15 +231,17 @@ class replica:
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
         if self.primary == self.local_ip:
-            #TODO: Do the message retriaval garbage
-            reply = await request.json()
-            txt = reply.loads(reply)
+            msg = await request.json()
+            if type(msg) == dict:
+                text = msg
+            else:
+                text = json.loads(msg)
             #update the primary if behind 
-            if self.n_view <= txt["N_View"]:
-                if self.n_operation < txt["N_Operation"]:
-                    self.log = txt["Log"]
-                    self.n_operation = txt["N_Operation"]
-                    self.n_commit = txt["N_Commit"]
+            if self.n_view <= text["N_View"]:
+                if self.n_operation < text["N_Operation"]:
+                    self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+                    self.n_operation = text["N_Operation"]
+                    self.n_commit = text["N_Commit"]
 
             if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
                 # Change status back to normal and send startview message to other replicas
@@ -250,7 +250,7 @@ class replica:
                 startview_message = json.dumps({
                     "Type": "StartView",
                     "N_View": self.n_view,
-                    "Log": self.log,
+                    "Log": json.dumps(self.log, cls = MessageEncoder),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
@@ -313,16 +313,7 @@ class replica:
             text = json.loads(msg)
         #primary sends out player move to backups, they add into the gamestate
         if self.local_ip == self.primary:
-            # op_id = text['N_Operation']
-            # self.client_requests[text['Client_ID']].append(text[op_id])
-            # if op_id <= self.n_commit:
-            #     msg = json.dumps({
-            #         "Type": "GameUpdate",
-            #         "Gamestate": self.log[op_id]
-            #     })
-            #     return web.Response(body = msg)
-                
-            # else:
+            
             self.timer.cancel()
             # add fields needed for the replicas (commit number op number etc.)
             self.n_operation += 1
@@ -584,7 +575,7 @@ class replica:
         else:
             text = json.loads(msg)
         self.n_view = text['N_View']
-        self.log = text['Log']
+        self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
         self.n_operation = text['N_Operation']
         self.n_commit = text['N_Commit']
         self.primary = request.remote
@@ -611,26 +602,21 @@ class replica:
         self.n_view = txt['N_View']
         self.n_operation = txt['N_Operation']
         self.n_commit = txt['N_Commit']
-        #TODO: Also fix this
-        self.log.append(i for i in txt['Log'])
+        for k,v in txt['Log']:
+            self.log[k] = Message(**v)
+        
 
     async def get_state(self, request):
-        body = await request.json()
-        txt = json.loads(body)
-
-        # Get log of everything after n' sent from other replica
-        op_num = txt["N_Operation"]
-        index = 0
-        for index in self.log:
-            if self.log[index].get_message_number() == op_num:
-                break
-        new_log = self.log[index:]
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
 
         msg = json.dumps({
             "Type": "NewState",
             "N_View":self.n_view,
-            #TODO: update this log as well
-            "Log": new_log,
+            "Log": json.dumps(self.log, cls = MessageEncoder),
             "N_Operation":self.n_operation,
             "N_Commit":self.n_commit})
             
@@ -655,7 +641,7 @@ class replica:
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": text['Nonce'],
-                    "Log": self.log,
+                    "Log": json.dumps(self.log, cls = MessageEncoder),
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
