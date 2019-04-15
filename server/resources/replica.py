@@ -394,44 +394,36 @@ class replica:
             text = json.loads(msg)
         #client has joined up
         #check for a running game
-        if not self.game_running:
-            if text["Client_IP"] not in self.client_list:
-                self.client_list[text["Client_IP"]] = len(self.client_list)
-                print("Adding Client: " + str(text["Client_IP"]))
-            # TODO: Broadcast the request across replicas, this means implement this function if the replica is not the server.
-            if self.local_ip == self.primary:
-                self.n_operation += 1
-                self.log[self.n_operation] = Message(self.n_operation, text)
-                #TODO: update op number
-                #TODO: add to log 
-                #this prepares the message to the client
-                self.ready_list[self.client_list[text["Client_IP"]]] = 0
-                resp = json.dumps({
-                    "Type": "ClientJoinOK",
-                    "Client_ID": self.client_list[text["Client_IP"]],
-                    "N_Request": text['N_Request']})
-                    
-                
-            return web.Response(body = resp)
-        
-        else:
-            return web.Response(status = 400)
-
-    async def client_join_ok(self, request):
-        msg = await request.json()
-        if type(msg) == dict:
-            text = msg
-        else:
-            text = json.loads(msg)
-        
         if self.local_ip == self.primary:
-            num_responses = self.log[text["N_Operation"]].recieve_backup()
-            if num_responses >= (len(self.other_replicas)/2) and not self.log[text["N_Operation"]].sent_to_client:
-                # prepare the message and send to client
+            if not self.game_running:
+                if text["Client_IP"] not in self.client_list:
+                    self.client_list[text["Client_IP"]] = len(self.client_list)
+                    print("Adding Client: " + str(text["Client_IP"]))
+                # TODO: Broadcast the request across replicas, this means implement this function if the replica is not the server.
+                    replica_msg = json.dumps({
+                        "Type": "ClientJoin",
+                        "Client_ID": self.client_list[text["Client_IP"]],
+                        "Client_IP": text["Client_IP"],
+                        "N_Request": text['N_Request']})
+                    await self.replica_broadcast("post", "ClientJoin", replica_msg)
+                    #this prepares the message to the client
+                    self.ready_list[self.client_list[text["Client_IP"]]] = 0
                 resp = json.dumps({
                     "Type": "ClientJoinOK",
                     "Client_ID": self.client_list[text["Client_IP"]],
                     "N_Request": text['N_Request']})
+                return web.Response(body = resp)
+                
+            else:
+                return web.Response(status = 400)
+        else:
+            #replica portion
+            if text["Client_IP"] not in self.client_list:
+                    self.client_list[text["Client_IP"]] = text["Client_ID"]
+                    print("Added Client: " + str(text["Client_IP"]))
+            return web.Response()
+           
+
 
 
 
@@ -739,7 +731,6 @@ class replica:
         # add routes that we will need for this system with the corresponding coroutines
         self.app.add_routes([web.post('/PlayerMovement', self.player_move),
                             web.post('/ClientJoin', self.client_join),
-                            web.post('/ClientJoinOK', self.client_join_ok),
                             web.post('/Ready', self.readied_up),
                             
                             web.post("/ReadyConfirm", self.ready_confirm),
