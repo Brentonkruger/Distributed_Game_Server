@@ -535,14 +535,16 @@ class replica:
             if text["Type"] == "Gamestate":
                 self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
-            if self.n_gamestate_responses >= int(len(self.other_replicas) / 2) + 1 and self.this_turns_responses == 0:
-                self.this_turns_responses = 1
+            clients_approved = self.log[text["N_Operation"]].recieve_backup(request.remote)
+            if clients_approved >= int(len(self.other_replicas) / 2) and not self.log[text["N_Operation"]].sent_to_client:
                 new_gamestate = json.dumps({
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
                 })
                 
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
+                #update that client has had the message sent to prevent other spurious messages
+                self.log[text["N_Operation"]].client_sent()
                 self.turn_timer.start()
             return web.Response()
 
