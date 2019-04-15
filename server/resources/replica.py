@@ -521,6 +521,7 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
+        print("Computing gamestate...")
 
         if self.primary == self.local_ip:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
@@ -554,10 +555,10 @@ class replica:
                     "Type": "GameUpdate",
                     "GameState": json.loads(self.game_board.get_full_gamestate())
                 })
-                
+                self.log[text["N_Operation"]].client_sent()
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 #update that client has had the message sent to prevent other spurious messages
-                self.log[text["N_Operation"]].client_sent()
+                
 
                 #This updates the commit number if we can. (other older messages might not be updated yet)
                 i = self.n_commit + 1
