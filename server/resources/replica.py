@@ -100,6 +100,7 @@ class replica:
         self.start_view_change_sent = False
         self.primary_recovery_response = False
         self.game_running = False
+        self.start_message_sent = False
         self.current_turn = 0
         self.log = {}
         self.game_board = None
@@ -496,14 +497,16 @@ class replica:
             return web.Response()
         else:
             self.start_count += 1
-            if self.start_count == len(self.other_replicas)/2:
+            if self.start_count >= len(self.other_replicas)/2 and not self.start_message_sent:
                 msg = json.dumps({
                     "Type": "GameUpdate", 
                     "GameState": text
                     })
+                
+                await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
+                self.start_message_sent = True
                 self.turn_timer = Timer(7, self.turn_cutoff, self.loop)
                 self.turn_timer.start()
-                await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
             return web.Response()
 
     async def compute_gamestate(self, request):
