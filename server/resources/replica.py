@@ -101,6 +101,7 @@ class replica:
         self.primary_recovery_response = False
         self.game_running = False
         self.start_message_sent = False
+        self.new_primary_selected = False
         self.current_turn = 0
         self.log = {}
         self.game_board = None
@@ -199,7 +200,7 @@ class replica:
                 
             self.n_start_view_change_messages += 1
             
-        if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
+        if self.n_start_view_change_messages >= int(len(self.other_replicas)/2) and not self.new_primary_selected:
             tmp_log = json.dumps(self.log, cls = MessageEncoder)
             msg = json.dumps({
                 "Type": "DoViewChange",
@@ -211,6 +212,7 @@ class replica:
                 "N_replica": self.local_ip
                 })
             # Send DoViewChange to new primary
+            self.new_primary_selected = True
             await self.get_new_primary_replica(self.primary)
             print("View change started")
             await self.send_message(self.primary, "post", "DoViewChange", msg)
@@ -263,6 +265,7 @@ class replica:
             # Broadcast message to other replicas
             await self.replica_broadcast("post", "StartView", startview_message)
             self.timer.start(5, self.send_commit)
+        return web.Response()
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
