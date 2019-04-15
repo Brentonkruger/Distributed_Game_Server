@@ -288,8 +288,8 @@ class replica:
             
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
-            self.timer = Timer(7, self.send_commit, self.loop)
-            self.timer.start(7, self.send_commit)
+            self.timer = Timer(5, self.send_commit, self.loop)
+            self.timer.start(5, self.send_commit)
 
     async def get_new_primary_replica(self, old_ip):
         index = self.all_replicas.index(old_ip)
@@ -341,6 +341,8 @@ class replica:
             if text["N_View"] > self.n_view:
                 self.start_state_transfer()
             self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
+            # add to the log
+            self.log[self.n_operation] = Message(self.n_operation, text)
             await self.send_message(self.primary, "post", "PlayerMoveOK", json.dumps(text))
 
             self.timer.start()
@@ -352,20 +354,24 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
+
         if self.local_ip == self.primary:
-            self.request_ok[text['N_Operation']] += 1
-            if self.request_ok[text['N_Operation']] >= (len(self.other_replicas)/2):
+            #TODO: overhaul to make use of the new logs
+            backup_responses = self.log[text["N_Operation"]].recieve_backup(request.remote)
+            if backup_responses >= (len(self.other_replicas)/2) and not self.log[text["N_Operation"]].sent_to_client:
                 self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
+                #we are using this as a quorum check among the replicas as these messages never get sent to clients.
+                self.log[text["N_Operation"]].client_sent()
    
-            threshold = len(self.other_replicas)/2
-            i = self.n_commit
-            lower_found = True
-            while i >= self.n_operation and lower_found:
-                if self.request_ok[i] >= threshold:
-                    self.n_commit = i
-                    i += 1
-                else:
-                    lower_found = False
+                #This updates the commit number if we can. (other older messages might not be updated yet)
+                i = self.n_commit + 1
+                lower_found = True
+                while i <= self.n_operation and lower_found:
+                    if self.log[i].sent_to_client:
+                        self.n_commit = i
+                        i += 1
+                    else:
+                        lower_found = False
             return web.Response()
         
     async def turn_cutoff(self):
@@ -374,7 +380,9 @@ class replica:
             self.current_turn += 1
             print("Doing turn number: ", str(self.current_turn))
             board = self.game_board.complete_turn()
-            # TODO: Add a message to the log.
+            #Add a message to the log.
+            self.n_operation += 1
+            self.log[self.n_operation] = Message(self.n_operation, self.game_board.get_full_gamestate())
             await self.replica_broadcast("post", "ComputeGamestate", board) 
 
 
@@ -390,24 +398,43 @@ class replica:
             if text["Client_IP"] not in self.client_list:
                 self.client_list[text["Client_IP"]] = len(self.client_list)
                 print("Adding Client: " + str(text["Client_IP"]))
-            # if self.local_ip == self.primary:
             # TODO: Broadcast the request across replicas, this means implement this function if the replica is not the server.
-            msg = await request.json()
-            if type(msg) == dict:
-                text = msg
-            else:
-                text = json.loads(msg)
-            self.ready_list[self.client_list[text["Client_IP"]]] = 0
-            resp = json.dumps({
-                "Type": "ClientJoinOK",
-                "Client_ID": self.client_list[text["Client_IP"]],
-                "N_Request": text['N_Request']})
+            if self.local_ip == self.primary:
+                self.n_operation += 1
+                self.log[self.n_operation] = Message(self.n_operation, text)
+                #TODO: update op number
+                #TODO: add to log 
+                #this prepares the message to the client
+                self.ready_list[self.client_list[text["Client_IP"]]] = 0
+                resp = json.dumps({
+                    "Type": "ClientJoinOK",
+                    "Client_ID": self.client_list[text["Client_IP"]],
+                    "N_Request": text['N_Request']})
+                    
                 
-            self.n_operation += 1
             return web.Response(body = resp)
         
         else:
             return web.Response(status = 400)
+
+    async def client_join_ok(self, request):
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        
+        if self.local_ip == self.primary:
+            num_responses = self.log[text["N_Operation"]].recieve_backup()
+            if num_responses >= (len(self.other_replicas)/2) and not self.log[text["N_Operation"]].sent_to_client:
+                # prepare the message and send to client
+                resp = json.dumps({
+                    "Type": "ClientJoinOK",
+                    "Client_ID": self.client_list[text["Client_IP"]],
+                    "N_Request": text['N_Request']})
+
+
+
 
     async def readied_up(self, request):
         #add the user's ready state
@@ -712,6 +739,7 @@ class replica:
         # add routes that we will need for this system with the corresponding coroutines
         self.app.add_routes([web.post('/PlayerMovement', self.player_move),
                             web.post('/ClientJoin', self.client_join),
+                            web.post('/ClientJoinOK', self.client_join_ok),
                             web.post('/Ready', self.readied_up),
                             
                             web.post("/ReadyConfirm", self.ready_confirm),
