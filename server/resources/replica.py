@@ -189,7 +189,7 @@ class replica:
             text = json.loads(msg)
         print("View change message received from ", request.remote, ". Starting view change to ", self.n_view)
 
-        if self.n_view < text["N_View"]:
+        if self.n_view <= text["N_View"]:
             if not self.start_view_change_sent:
                 message = json.dumps({
                     "N_View": self.n_view,
@@ -217,6 +217,7 @@ class replica:
     async def send_view_change(self):
         #change to view change mode
         #send out initial view change message
+        print("Starting view change...")
         self.current_state = State.VIEW_CHANGE
         self.n_view += 1
         message = json.dumps({
@@ -227,37 +228,36 @@ class replica:
 
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
-        if self.primary == self.local_ip:
-            msg = await request.json()
-            if type(msg) == dict:
-                text = msg
-            else:
-                text = json.loads(msg)
-            #update the primary if behind 
-            if self.n_view <= text["N_View"]:
-                if self.n_operation < text["N_Operation"]:
-                    self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
-                    self.n_operation = text["N_Operation"]
-                    self.n_commit = text["N_Commit"]
+        
+        msg = await request.json()
+        if type(msg) == dict:
+            text = msg
+        else:
+            text = json.loads(msg)
+        #update the primary if behind 
+        if self.n_view <= text["N_View"]:
+            if self.n_operation < text["N_Operation"]:
+                self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
+                self.n_operation = text["N_Operation"]
+                self.n_commit = text["N_Commit"]
 
-            if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
-                # Change status back to normal and send startview message to other replicas
-                self.current_state = State.NORMAL
-                # StartView json
-                startview_message = json.dumps({
-                    "Type": "StartView",
-                    "N_View": self.n_view,
-                    "Log": json.dumps(self.log, cls = MessageEncoder),
-                    "N_Operation": self.n_operation,
-                    "N_Commit": self.n_commit
-                })
-
-                # Broadcast message to other replicas
-                await self.replica_broadcast("post", "StartView", startview_message)
-                msg = json.dumps({"Type": "New_Primary",
-                    "IP": self.local_ip})
-                self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
-                self.timer.start(5, self.send_commit)
+        if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
+            msg = json.dumps({"Type": "New_Primary",
+                "IP": self.local_ip})
+            self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
+            # Change status back to normal and send startview message to other replicas
+            self.current_state = State.NORMAL
+            # StartView json
+            startview_message = json.dumps({
+                "Type": "StartView",
+                "N_View": self.n_view,
+                "Log": json.dumps(self.log, cls = MessageEncoder),
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit
+            })
+            # Broadcast message to other replicas
+            await self.replica_broadcast("post", "StartView", startview_message)
+            self.timer.start(5, self.send_commit)
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
