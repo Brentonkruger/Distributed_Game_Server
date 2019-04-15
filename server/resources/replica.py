@@ -531,7 +531,7 @@ class replica:
                 self.n_commit = text["N_Commit"]
             if text["N_View"] > self.n_view:
                 self.start_state_transfer()
-                
+
             self.game_board.recieve_game_state(text["Gamestate"])
 
             og_game_state = self.game_board.get_full_gamestate()
@@ -592,7 +592,7 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        if text["N_View"] > self.n_view or text["N_Commit"] > self.n_commit:
+        if text["N_View"] > self.n_view:
             await self.start_state_transfer()
         self.timer.start()
         #don't update client about this one.
