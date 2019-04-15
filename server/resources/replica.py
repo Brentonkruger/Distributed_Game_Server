@@ -194,8 +194,9 @@ class replica:
                 message = json.dumps({
                     "N_View": self.n_view,
                     "N_replica": self.local_ip})
-                await self.replica_broadcast("post", "StartViewChange", message)
                 self.start_view_change_sent = True
+                await self.replica_broadcast("post", "StartViewChange", message)
+                
             self.n_start_view_change_messages += 1
             
         if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
