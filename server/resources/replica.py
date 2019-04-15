@@ -211,7 +211,7 @@ class replica:
                 "N_replica": self.local_ip
                 })
             # Send DoViewChange to new primary
-            self.get_new_primary_replica(self.primary)
+            await self.get_new_primary_replica(self.primary)
             print("View change started")
             await self.send_message(self.primary, "post", "DoViewChange", msg)
         return web.Response()
@@ -295,6 +295,7 @@ class replica:
             self.timer.start(5, self.send_commit)
 
     async def get_new_primary_replica(self, old_ip):
+        self.all_replicas.sort()
         index = self.all_replicas.index(old_ip)
         self.primary = self.all_replicas[(index + 1) % len(self.all_replicas)]
         
