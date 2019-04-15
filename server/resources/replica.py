@@ -614,10 +614,9 @@ class replica:
             "N_Operation":self.n_operation,
             "N_Replica":self.local_ip
         }
-        tmp_list = self.other_replicas
-        resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
-        while (resp.status != 200):
-            resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
+        resp = await self.send_message(random.sample(self.other_replicas, 1)[0], "post", "GetState", msg)
+        while (resp.status != 200 or resp == None):
+            resp = await self.send_message(random.sample(self.other_replicas, 1)[0], "post", "GetState", msg)
         #update state
 
         msg = await resp.text()
