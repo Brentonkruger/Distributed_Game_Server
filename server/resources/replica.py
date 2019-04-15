@@ -435,6 +435,8 @@ class replica:
             text = json.loads(msg)
         #primary sends backups request, who respond I guess?
         if self.local_ip == self.primary:
+            #update the ready list to track which clients are ready.
+            self.ready_list[text["Client_ID"]] = 0
             await self.replica_broadcast("post", "Ready", json.dumps(text))
         else:
             await self.send_message(self.primary, "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
@@ -446,16 +448,16 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
-        cid = text["Client_ID"]
-        self.ready_list[cid] += 1
-        can_start = True
-        for i in self.ready_list.values():
-            if i < len(self.other_replicas)/2:
-                can_start = False
-        if can_start:
-            for key, val in self.ready_list.items():
-                self.ready_list[key] = 0
-            await self.start_game()
+        if not self.game_running:
+            self.ready_list[text["Client_ID"]] += 1
+            can_start = True
+            for i in self.ready_list.values():
+                if i >= len(self.other_replicas)/2:
+                    can_start = False
+            if can_start:
+                for key, val in self.ready_list.items():
+                    self.ready_list[key] = 0
+                await self.start_game()
         return web.Response()
   
     async def start_game(self):
@@ -474,11 +476,8 @@ class replica:
                 "Type": "GameStart",
                 "GameState": gamestate
             })
-            # TODO: Add to the log
             await self.replica_broadcast("post", "StartConfirm", start)
-            # self.session.post("http://" + self.routing_layer + ":5000/GameStart", data=start)
-            # 
-
+            
     async def start_confirm(self,request):
         msg = await request.json()
         if type(msg) == dict:
@@ -488,21 +487,16 @@ class replica:
         # cid = text["Client_ID"]
         
         if self.local_ip != self.primary:
-            can_start = True
-            for i in self.ready_list.values():
-                if i < len(self.other_replicas)/2:
-                    can_start = False
-            if can_start:
-                for key, val in self.ready_list.items():
-                    self.ready_list[key] = 0
-                self.game_board = board.Board(1)
-                self.game_board.recieve_game_state(text["GameState"])
-                #respond with startconfirm to server
-                await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
+            for key, val in self.ready_list.items():
+                self.ready_list[key] = 0
+            self.game_board = board.Board(1)
+            self.game_board.recieve_game_state(text["GameState"])
+            #respond with startconfirm to server
+            await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
             return web.Response()
         else:
             self.start_count += 1
-            if self.start_count >= len(self.other_replicas)/2:
+            if self.start_count == len(self.other_replicas)/2:
                 msg = json.dumps({
                     "Type": "GameUpdate", 
                     "GameState": text
