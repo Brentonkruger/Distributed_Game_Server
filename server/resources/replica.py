@@ -524,6 +524,14 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
+            self.timer.cancel()
+            if text["N_Operation"] > self.n_operation:
+                self.n_operation = text["N_Operation"]
+            if text["N_Commit"] > self.n_commit:
+                self.n_commit = text["N_Commit"]
+            if text["N_View"] > self.n_view:
+                self.start_state_transfer()
+                
             self.game_board.recieve_game_state(text["Gamestate"])
 
             og_game_state = self.game_board.get_full_gamestate()
@@ -535,6 +543,7 @@ class replica:
                 "GameBoard": json.loads(og_game_state)
             })
             await self.send_message(self.primary, "post", "Gamestate", update)
+            self.timer.start()
         return web.Response()
     
     async def receive_gamestate(self, request):
