@@ -127,7 +127,6 @@ class replica:
         except:
             self.loop.close()
         
-
     async def start_recovery(self):
         self.current_state = State.RECOVERING
         self.n_recovery_messages = 0
@@ -169,7 +168,6 @@ class replica:
                     self.primary_recovery_response = False
                     self.current_state = State.NORMAL
         return web.Response()
-
 
     async def start_view_change(self, request):
         #recieves this message from other nodes to start the process.
@@ -225,7 +223,6 @@ class replica:
             "N_replica": self.local_ip})
         await self.replica_broadcast("post", "StartViewChange", message)
         self.start_view_change_sent = True
-
 
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
@@ -295,14 +292,12 @@ class replica:
         index = self.all_replicas.index(old_ip)
         return self.all_replicas[(index + 1) % len(self.all_replicas)]
         
-
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
             await self.session.post("http://" + ip_addr + ":9999/" + req_location, data = data)
         if req_type == "get":
             await self.session.get("http://" + ip_addr + ":9999/" + req_location, data = data)
             
-
     async def player_move(self, request):
         #check if the move has already been made (op number)
         msg = await request.json()
@@ -379,11 +374,18 @@ class replica:
             self.this_turns_responses = 0
             self.current_turn += 1
             print("Doing turn number: ", str(self.current_turn))
-            board = self.game_board.complete_turn()
+            self.game_board.complete_turn()
             #Add a message to the log.
             self.n_operation += 1
-            self.log[self.n_operation] = Message(self.n_operation, self.game_board.get_full_gamestate())
-            await self.replica_broadcast("post", "ComputeGamestate", board) 
+            msg = json.dumps({
+                "Type": "ComputeGamestate",
+                "N_Operation": self.n_operation,
+                "N_Commit": self.n_commit,
+                "N_View": self.n_view,
+                "Gamestate": self.game_board.get_full_gamestate()
+            })
+            self.log[self.n_operation] = Message(self.n_operation, msg)
+            await self.replica_broadcast("post", "ComputeGamestate", msg) 
 
 
     async def client_join(self, request):
@@ -423,11 +425,6 @@ class replica:
                     print("Added Client: " + str(text["Client_IP"]))
             return web.Response()
            
-
-
-
-
-
     async def readied_up(self, request):
         #add the user's ready state
 
@@ -460,7 +457,6 @@ class replica:
                 self.ready_list[key] = 0
             await self.start_game()
   
-
     async def start_game(self):
         #finalize the servers on game start
         #send the message to the clients to begin the game
@@ -514,8 +510,6 @@ class replica:
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=msg)
             return web.Response()
 
-
-
     async def compute_gamestate(self, request):
         #compute gamestate and return message
         # If primary, send bad response
@@ -530,14 +524,14 @@ class replica:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
         # Send response to primary
         else:
-            self.game_board.recieve_game_state(json.dumps(text))
+            self.game_board.recieve_game_state(json.dumps(text["Gamestate"]))
 
             og_game_state = self.game_board.get_full_gamestate()
             update = json.dumps({
                 "Type": "Gamestate",
-                "N_View": self.n_view,
-                "N_Operation": self.n_operation,
-                "N_Commit": self.n_commit,
+                "N_View": text["N_View"],
+                "N_Operation": text["N_Operation"],
+                "N_Commit": text["N_Commit"],
                 "GameBoard": json.loads(og_game_state)
             })
             await self.send_message(self.primary, "post", "Gamestate", update)
@@ -551,8 +545,6 @@ class replica:
                 text = msg
             else:
                 text = json.loads(msg)
-            if text["Type"] == "Gamestate":
-                self.n_gamestate_responses += 1
             # Once enough responses received, send to clients with final gamestate
             clients_approved = self.log[text["N_Operation"]].recieve_backup(request.remote)
             if clients_approved >= int(len(self.other_replicas) / 2) and not self.log[text["N_Operation"]].sent_to_client:
@@ -564,13 +556,23 @@ class replica:
                 await self.session.post("http://" + self.routing_layer + ":5000/GameUpdate", data=new_gamestate)
                 #update that client has had the message sent to prevent other spurious messages
                 self.log[text["N_Operation"]].client_sent()
+
+                #This updates the commit number if we can. (other older messages might not be updated yet)
+                i = self.n_commit + 1
+                lower_found = True
+                while i <= self.n_operation and lower_found:
+                    if self.log[i].sent_to_client:
+                        self.n_commit = i
+                        i += 1
+                    else:
+                        lower_found = False
+
                 self.turn_timer.start()
             return web.Response()
 
         # If not primary, send address of primary to replica
         else:
             return web.Response(status = 400, body = json.dumps({"Primary_IP": self.primary}))
-
 
     async def apply_commit(self, request):
         #recieve the commit message, and apply if necessary.
@@ -587,7 +589,6 @@ class replica:
         #don't update client about this one.
         return web.Response()
             
-
     async def start_view(self, request):
         msg = await request.json()
         if type(msg) == dict:
@@ -602,7 +603,6 @@ class replica:
         self.current_state = State.NORMAL
         return web.Request()
     
-
     async def start_state_transfer(self):
         #send state transfer
         #set operation back to where things were still ok
@@ -626,7 +626,6 @@ class replica:
         self.n_commit = text['N_Commit']
         self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
         
-
     async def get_state(self, request):
 
         msg = json.dumps({
@@ -678,7 +677,6 @@ class replica:
                 return web.Response()
         else:
             return web.Response(status = 400)
-
 
     async def replica_list(self, request):
         #format the replica list and return it to the backup
