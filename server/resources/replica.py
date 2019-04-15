@@ -449,11 +449,12 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
+        print("received ready confirmation")
         if not self.game_running:
             self.ready_list[text["Client_ID"]] += 1
             can_start = True
             for i in self.ready_list.values():
-                if i >= len(self.other_replicas)/2:
+                if i < len(self.other_replicas)/2:
                     can_start = False
             if can_start:
                 for key, val in self.ready_list.items():
