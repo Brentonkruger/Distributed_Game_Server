@@ -200,10 +200,11 @@ class replica:
             self.n_start_view_change_messages += 1
             
         if self.n_start_view_change_messages >= int(len(self.other_replicas)/2):
+            tmp_log = json.dumps(self.log, cls = MessageEncoder)
             msg = json.dumps({
                 "Type": "DoViewChange",
                 "N_View": self.n_view,
-                "Log": json.dumps(self.log, cls = MessageEncoder),
+                "Log": tmp_log,
                 "N_View_Old": self.n_view-1,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit,
@@ -251,10 +252,11 @@ class replica:
             # Change status back to normal and send startview message to other replicas
             self.current_state = State.NORMAL
             # StartView json
+            tmp_log = json.dumps(self.log, cls = MessageEncoder)
             startview_message = json.dumps({
                 "Type": "StartView",
                 "N_View": self.n_view,
-                "Log": json.dumps(self.log, cls = MessageEncoder),
+                "Log": tmp_log,
                 "N_Operation": self.n_operation,
                 "N_Commit": self.n_commit
             })
@@ -645,10 +647,11 @@ class replica:
         
     async def get_state(self, request):
         if self.current_state == State.NORMAL:
+            tmp_log = json.dumps(self.log, cls = MessageEncoder)
             msg = json.dumps({
                 "Type": "NewState",
                 "N_View":self.n_view,
-                "Log": json.dumps(self.log, cls = MessageEncoder),
+                "Log": tmp_log,
                 "N_Operation":self.n_operation,
                 "N_Commit":self.n_commit})
                 
@@ -666,16 +669,13 @@ class replica:
                 text = json.loads(msg)
             if self.primary == self.local_ip:
 
-                #if self.game_board == None:
-                 #   gameboard = None
-                #else:
-                 #   gameboard = json.loads(self.game_board.get_full_gamestate())
                 #return the intense answer
+                tmp_log = json.dumps(self.log, cls = MessageEncoder)
                 reply = json.dumps({
                     "Type": "RecoveryResponse",
                     "N_View": self.n_view,
                     "Nonce": text['Nonce'],
-                    "Log": json.dumps(self.log, cls = MessageEncoder),
+                    "Log": tmp_log,
                     "N_Operation": self.n_operation,
                     "N_Commit": self.n_commit
                 })
