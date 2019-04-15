@@ -213,7 +213,7 @@ class replica:
             # Send DoViewChange to new primary
             self.primary = self.get_new_primary_replica(self.primary)
             print("View change started")
-            await self.send_message(self.primary, "post", "DoViewChange", msg)
+            await self.send_message(str(self.primary), "post", "DoViewChange", msg)
         return web.Response()
 
     async def send_view_change(self):
@@ -287,7 +287,7 @@ class replica:
 
             #connect to primary and ask for updated replica list
             msg = json.dumps({"Type": "GetReplicaList", "IP": self.local_ip})
-            await self.send_message(self.primary, "post", "GetReplicaList", msg)
+            await self.send_message(str(self.primary), "post", "GetReplicaList", msg)
             
         else:
             #start a timer to send out a commit message (basically as a heartbeat)
@@ -344,7 +344,7 @@ class replica:
             self.game_board.get_player_by_id(text["Client_ID"]).change_movement(text["Operation"])
             # add to the log
             self.log[self.n_operation] = Message(self.n_operation, text)
-            await self.send_message(self.primary, "post", "PlayerMoveOK", json.dumps(text))
+            await self.send_message(str(self.primary), "post", "PlayerMoveOK", json.dumps(text))
 
             self.timer.start()
             return web.Response()
@@ -444,7 +444,7 @@ class replica:
             self.ready_list[text["Client_ID"]] = 0
             await self.replica_broadcast("post", "Ready", json.dumps(text))
         else:
-            await self.send_message(self.primary, "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
+            await self.send_message(str(self.primary), "post", "ReadyConfirm", json.dumps({"Type": "ReadyConfirm", "Client_ID": text["Client_ID"]}))
         return web.Response()
         
     async def ready_confirm(self, request):
@@ -498,7 +498,7 @@ class replica:
             self.game_board = board.Board(1)
             self.game_board.recieve_game_state(text["GameState"])
             #respond with startconfirm to server
-            await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
+            await self.send_message(str(self.primary), "post", "StartConfirm", text["GameState"])
             return web.Response()
         else:
             self.start_count += 1
@@ -547,7 +547,7 @@ class replica:
                 "N_Commit": text["N_Commit"],
                 "GameBoard": json.loads(og_game_state)
             })
-            await self.send_message(self.primary, "post", "Gamestate", update)
+            await self.send_message(str(self.primary), "post", "Gamestate", update)
             self.timer.start()
         return web.Response()
     
