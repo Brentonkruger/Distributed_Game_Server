@@ -257,7 +257,7 @@ class replica:
                 msg = json.dumps({"Type": "New_Primary",
                     "IP": self.local_ip})
                 self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
-                self.timer.start(7, self.send_commit)
+                self.timer.start(5, self.send_commit)
 
     async def send_commit(self):
         #send out the commit message as a heartbeat
@@ -629,7 +629,7 @@ class replica:
         self.n_operation = text['N_Operation']
         self.n_commit = text['N_Commit']
         self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
-        
+
         self.current_state = State.NORMAL
         
     async def get_state(self, request):
@@ -724,8 +724,8 @@ class replica:
                 await self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
-            self.timer = Timer(800000, self.send_view_change, self.loop)
-            self.timer.start(800000, self.send_view_change)
+            self.timer = Timer(8, self.send_view_change, self.loop)
+            self.timer.start(8, self.send_view_change)
             return web.Response()
         else: 
             return web.Response(status = 400)
