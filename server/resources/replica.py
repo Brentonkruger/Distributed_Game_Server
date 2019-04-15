@@ -606,6 +606,7 @@ class replica:
     async def start_state_transfer(self):
         #send state transfer
         #set operation back to where things were still ok
+
         self.n_operation = self.n_commit
         msg = {
             "Type": "GetState",
@@ -615,7 +616,10 @@ class replica:
         }
         tmp_list = self.other_replicas
         resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
+        while (resp.status != 200):
+            resp = await self.send_message(random.sample(tmp_list, 1)[0], "post", "GetState", msg)
         #update state
+
         msg = await resp.text()
         if type(msg) == dict:
             text = msg
@@ -626,16 +630,20 @@ class replica:
         self.n_commit = text['N_Commit']
         self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
         
+        self.current_state = State.NORMAL
+        
     async def get_state(self, request):
-
-        msg = json.dumps({
-            "Type": "NewState",
-            "N_View":self.n_view,
-            "Log": json.dumps(self.log, cls = MessageEncoder),
-            "N_Operation":self.n_operation,
-            "N_Commit":self.n_commit})
-            
-        return web.Response(body = msg)
+        if self.current_state == State.NORMAL:
+            msg = json.dumps({
+                "Type": "NewState",
+                "N_View":self.n_view,
+                "Log": json.dumps(self.log, cls = MessageEncoder),
+                "N_Operation":self.n_operation,
+                "N_Commit":self.n_commit})
+                
+            return web.Response(body = msg)
+        else:
+            return web.Response(status=400)
 
     async def recovery_help(self, request):
         if self.current_state != State.RECOVERING:        
