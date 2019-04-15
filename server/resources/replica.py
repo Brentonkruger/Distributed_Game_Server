@@ -223,8 +223,9 @@ class replica:
         message = json.dumps({
             "N_View": self.n_view,
             "N_replica": self.local_ip})
-        await self.replica_broadcast("post", "StartViewChange", message)
         self.start_view_change_sent = True
+        await self.replica_broadcast("post", "StartViewChange", message)
+        
 
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
@@ -234,6 +235,7 @@ class replica:
             text = msg
         else:
             text = json.loads(msg)
+        print("Do view change received from: ", request.remote)
         #update the primary if behind 
         if self.n_view <= text["N_View"]:
             if self.n_operation < text["N_Operation"]:
