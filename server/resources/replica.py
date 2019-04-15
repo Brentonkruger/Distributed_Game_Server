@@ -388,7 +388,6 @@ class replica:
             self.log[self.n_operation] = Message(self.n_operation, msg)
             await self.replica_broadcast("post", "ComputeGamestate", msg) 
 
-
     async def client_join(self, request):
         msg = await request.json()
         if type(msg) == dict:
