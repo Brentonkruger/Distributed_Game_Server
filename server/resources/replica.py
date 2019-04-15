@@ -456,6 +456,7 @@ class replica:
             for key, val in self.ready_list.items():
                 self.ready_list[key] = 0
             await self.start_game()
+        return web.Response()
   
     async def start_game(self):
         #finalize the servers on game start
@@ -498,6 +499,7 @@ class replica:
                 self.game_board.recieve_game_state(text["GameState"])
                 #respond with startconfirm to server
                 await self.send_message(self.primary, "post", "StartConfirm", text["GameState"])
+            return web.Response()
         else:
             self.start_count += 1
             if self.start_count >= len(self.other_replicas)/2:
