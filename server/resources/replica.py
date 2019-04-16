@@ -741,8 +741,8 @@ class replica:
                 await self.start_recovery()
 
             #start the heartbeat expectiation from the primary.
-            self.timer = Timer(8, self.send_view_change, self.loop)
-            self.timer.start(8, self.send_view_change)
+            self.timer = Timer(800000, self.send_view_change, self.loop)
+            self.timer.start(800000, self.send_view_change)
             return web.Response()
         else: 
             return web.Response(status = 400)
