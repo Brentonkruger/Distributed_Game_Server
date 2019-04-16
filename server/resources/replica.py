@@ -1,13 +1,16 @@
-from enum import Enum
-import ipaddress
 import asyncio
-import socket
-import secrets
+import ipaddress
 import json
-from aiohttp import web
-import aiohttp
 import random
+import secrets
+import socket
+from enum import Enum
+
+import aiohttp
+from aiohttp import web
+
 from . import board
+
 
 class State(Enum):
     NORMAL = 0
@@ -230,7 +233,6 @@ class replica:
         self.start_view_change_sent = True
         await self.replica_broadcast("post", "StartViewChange", message)
         
-
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
         
@@ -772,5 +774,3 @@ class replica:
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.local_ip, 9999)
         await self.site.start()
-
-
