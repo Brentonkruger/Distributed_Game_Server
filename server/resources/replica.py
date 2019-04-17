@@ -199,8 +199,8 @@ class replica:
                     "N_View": self.n_view,
                     "N_replica": self.local_ip})
                 self.start_view_change_sent = True
-                del self.other_replicas[self.primary]
-                del self.all_replicas[self.primary]
+                self.other_replicas.remove(self.primary)
+                self.all_replicas.remove(self.primary)
                 await self.replica_broadcast("post", "StartViewChange", message)
                 
             self.n_start_view_change_messages += 1
@@ -233,8 +233,9 @@ class replica:
             "N_View": self.n_view,
             "N_replica": self.local_ip})
         self.start_view_change_sent = True
-        del self.other_replicas[self.primary]
-        del self.all_replicas[self.primary]
+        # Old primary removed
+        self.other_replicas.remove(self.primary)
+        self.all_replicas.remove(self.primary)
         await self.replica_broadcast("post", "StartViewChange", message)
                 
         
