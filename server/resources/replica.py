@@ -218,7 +218,7 @@ class replica:
                 })
             # Send DoViewChange to new primary
             self.new_primary_selected = True
-            await self.get_new_primary_replica(self.primary)
+            await self.get_new_primary_replica()
             print("View change started")
             await self.send_message(self.primary, "post", "DoViewChange", msg)
         return web.Response()
@@ -305,10 +305,9 @@ class replica:
             self.timer = Timer(5, self.send_commit, self.loop)
             self.timer.start(5, self.send_commit)
 
-    async def get_new_primary_replica(self, old_ip):
+    async def get_new_primary_replica(self):
         self.all_replicas.sort()
-        index = self.all_replicas.index(old_ip)
-        self.primary = self.all_replicas[(index + 1) % len(self.all_replicas)]
+        self.primary = self.all_replicas[0]
         
     async def send_message(self, ip_addr, req_type, req_location, data):
         if req_type == "post":
