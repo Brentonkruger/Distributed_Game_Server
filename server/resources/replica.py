@@ -626,7 +626,7 @@ class replica:
         self.n_commit = text['N_Commit']
         self.primary = request.remote
         self.current_state = State.NORMAL
-        return web.Request()
+        return web.Response()
     
     async def start_state_transfer(self):
         #send state transfer
