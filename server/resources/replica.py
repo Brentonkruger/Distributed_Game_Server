@@ -231,7 +231,10 @@ class replica:
             "N_View": self.n_view,
             "N_replica": self.local_ip})
         self.start_view_change_sent = True
-        await self.replica_broadcast("post", "StartViewChange", message)
+        for rep in self.other_replicas:
+            if rep != self.primary:
+                await self.send_message(rep, "post", "StartViewChange", message)
+                
         
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
