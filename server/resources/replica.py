@@ -199,6 +199,8 @@ class replica:
                     "N_View": self.n_view,
                     "N_replica": self.local_ip})
                 self.start_view_change_sent = True
+                del self.other_replicas[self.primary]
+                del self.all_replicas[self.primary]
                 await self.replica_broadcast("post", "StartViewChange", message)
                 
             self.n_start_view_change_messages += 1
@@ -224,16 +226,16 @@ class replica:
     async def send_view_change(self):
         #change to view change mode
         #send out initial view change message
-        print("Starting view change...")
+        print("Sending view change message...")
         self.current_state = State.VIEW_CHANGE
         self.n_view += 1
         message = json.dumps({
             "N_View": self.n_view,
             "N_replica": self.local_ip})
         self.start_view_change_sent = True
-        for rep in self.other_replicas:
-            if rep != self.primary:
-                await self.send_message(rep, "post", "StartViewChange", message)
+        del self.other_replicas[self.primary]
+        del self.all_replicas[self.primary]
+        await self.replica_broadcast("post", "StartViewChange", message)
                 
         
     async def do_view_change(self, request):
