@@ -258,7 +258,7 @@ class replica:
         if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
             msg = json.dumps({"Type": "New_Primary",
                 "IP": self.local_ip})
-            self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
+            await self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
             # Change status back to normal and send startview message to other replicas
             self.current_state = State.NORMAL
             # StartView json
