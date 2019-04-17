@@ -241,7 +241,6 @@ class replica:
         
     async def do_view_change(self, request):
         # If replica is primary, wait for f + 1 DoViewChange responses and update information
-        
         msg = await request.json()
         if type(msg) == dict:
             text = msg
@@ -250,6 +249,7 @@ class replica:
         print("Do view change received from: ", request.remote)
         #update the primary if behind 
         if self.n_view <= text["N_View"]:
+            self.n_do_view_change_messages += 1
             if self.n_operation < text["N_Operation"]:
                 self.log = {k:Message(**v) for k,v in json.loads(text["Log"]).items()}
                 self.n_operation = text["N_Operation"]
