@@ -256,6 +256,8 @@ class replica:
                 self.n_commit = text["N_Commit"]
 
         if self.n_do_view_change_messages >= int(len(self.all_replicas) / 2):
+            await self.get_new_primary_replica()
+            print("I am the new primary!")
             msg = json.dumps({"Type": "New_Primary",
                 "IP": self.local_ip})
             await self.session.post("http://" + self.routing_layer + ":5000/NewPrimary", data=msg)
@@ -626,6 +628,7 @@ class replica:
         self.n_commit = text['N_Commit']
         self.primary = request.remote
         self.current_state = State.NORMAL
+        print("Changed primary to: ", str(self.primary))
         return web.Response()
     
     async def start_state_transfer(self):
