@@ -274,6 +274,7 @@ class replica:
             })
             # Broadcast message to other replicas
             await self.replica_broadcast("post", "StartView", startview_message)
+            self.timer.cancel()
             self.timer.start(5, self.send_commit)
         return web.Response()
 
